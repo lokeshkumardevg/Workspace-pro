@@ -39,10 +39,10 @@ class AnnouncementController extends Controller
 
         Announcement::create([
             'user_id' => auth()->id(),
-            'title' => $request->title,
-            'content' => $request->content,
-            'type' => $request->type,
-            'expires_at' => $request->expires_at,
+            'title' => $request->input('title'),
+            'content' => $request->input('content'),
+            'type' => $request->input('type'),
+            'expires_at' => $request->input('expires_at'),
         ]);
 
         return redirect()->back()->with('success', '📢 Announcement broadcasted successfully.');
