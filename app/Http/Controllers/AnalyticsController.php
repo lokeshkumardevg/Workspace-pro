@@ -29,7 +29,7 @@ class AnalyticsController extends Controller
             ->withCount([
                 'tasks' => function ($q) {
                     $q->where('status', 'completed')
-                        ->whereMonth('completed_at', now()->month);
+                        ->whereMonth('updated_at', now()->month);
                 }
             ])
             ->orderBy('tasks_count', 'desc')
