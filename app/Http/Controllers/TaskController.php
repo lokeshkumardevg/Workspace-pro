@@ -143,6 +143,7 @@ class TaskController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'due_date' => 'nullable|date',
+            'priority' => 'required|in:low,medium,high,urgent',
         ]);
 
         $task = Task::create([
@@ -152,6 +153,7 @@ class TaskController extends Controller
             'description' => $request->description,
             'due_date' => $request->due_date,
             'status' => 'pending',
+            'priority' => $request->priority,
             'created_by' => $request->user()->id,
         ]);
 

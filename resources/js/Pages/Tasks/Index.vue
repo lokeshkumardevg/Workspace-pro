@@ -49,6 +49,7 @@ const form = useForm({
     title: '',
     description: '',
     due_date: '',
+    priority: 'medium',
 });
 
 const createTask = () => {
@@ -231,6 +232,15 @@ const formatDate = (d) => {
                                                 <div class="text-sm font-black text-gray-900 group-hover:text-[#2CA01C] transition-colors flex items-center gap-2">
                                                     {{ task.title }}
                                                     <span class="text-[9px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-black">#{{ task.id }}</span>
+                                                    <span v-if="task.priority" class="text-[8px] font-black uppercase px-2 py-0.5 rounded-full border shadow-sm"
+                                                          :class="{
+                                                              'bg-green-50 text-green-700 border-green-100': task.priority === 'low',
+                                                              'bg-amber-50 text-amber-700 border-amber-100': task.priority === 'medium',
+                                                              'bg-orange-50 text-orange-700 border-orange-100': task.priority === 'high',
+                                                              'bg-red-50 text-red-700 border-red-100 animate-pulse': task.priority === 'urgent'
+                                                          }">
+                                                        {{ task.priority }}
+                                                    </span>
                                                 </div>
                                                 <div class="text-[11px] text-gray-400 mt-1 font-medium italic line-clamp-1" v-if="task.description">{{ task.description }}</div>
                                                 <div class="text-[10px] text-rose-500 font-black mt-2 flex items-center gap-1 uppercase tracking-tighter" v-if="task.due_date">
@@ -415,9 +425,20 @@ const formatDate = (d) => {
                                     <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Detailed Description</label>
                                     <textarea v-model="form.description" rows="4" class="w-full bg-gray-50 border-gray-100 rounded-xl focus:ring-[#2CA01C] focus:border-[#2CA01C] text-sm font-bold shadow-inner" placeholder="Detailed instructions..."></textarea>
                                 </div>
-                                <div>
-                                    <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Final Soft Deadline</label>
-                                    <input v-model="form.due_date" type="date" class="w-full bg-gray-50 border-gray-100 rounded-xl focus:ring-[#2CA01C] focus:border-[#2CA01C] text-sm font-bold shadow-inner" />
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Final Soft Deadline</label>
+                                        <input v-model="form.due_date" type="date" class="w-full bg-gray-50 border-gray-100 rounded-xl focus:ring-[#2CA01C] focus:border-[#2CA01C] text-sm font-bold shadow-inner" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Task Importance</label>
+                                        <select v-model="form.priority" class="w-full bg-gray-50 border-gray-100 rounded-xl focus:ring-[#2CA01C] focus:border-[#2CA01C] text-sm font-bold shadow-inner" required>
+                                            <option value="low">🟢 Low Priority</option>
+                                            <option value="medium">🟡 Medium Priority</option>
+                                            <option value="high">🟠 High Priority</option>
+                                            <option value="urgent">🔴 Urgent Action</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
                         </div>
