@@ -120,6 +120,9 @@ Route::middleware('auth')->group(function () {
     // Notifications
     Route::post('/notifications/{id}/read', [\App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [\App\Http\Controllers\NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
+
+    // Analytics
+    Route::get('/analytics', [\App\Http\Controllers\AnalyticsController::class, 'index'])->name('analytics.index');
 });
 
 require __DIR__ . '/auth.php';
