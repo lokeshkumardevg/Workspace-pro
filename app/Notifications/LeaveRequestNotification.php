@@ -31,7 +31,7 @@ class LeaveRequestNotification extends Notification
             ->line('A new leave request has been submitted and is awaiting your review.')
             ->line('**Employee:** ' . $this->leaveRequest->user->name)
             ->line('**Leave Type:** ' . ucfirst($this->leaveRequest->type))
-            ->line('**Duration:** ' . $this->leaveRequest->from_date->format('d M') . ' to ' . $this->leaveRequest->to_date->format('d M') . ' (' . $this->leaveRequest->days . ' days)')
+            ->line('**Duration:** ' . \Carbon\Carbon::parse($this->leaveRequest->from_date)->format('d M') . ' to ' . \Carbon\Carbon::parse($this->leaveRequest->to_date)->format('d M') . ' (' . $this->leaveRequest->days . ' days)')
             ->line('**Reason:** ' . $this->leaveRequest->reason)
             ->action('Review Request', url('/leaves'))
             ->line('Please review this request at your earliest convenience.');

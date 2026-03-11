@@ -125,6 +125,12 @@ const submitReassign = () => {
         }
     });
 };
+
+const formatDate = (d) => {
+    if (!d) return '—';
+    const date = new Date(d);
+    return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+};
 </script>
 
 <template>
@@ -229,7 +235,7 @@ const submitReassign = () => {
                                                 <div class="text-[11px] text-gray-400 mt-1 font-medium italic line-clamp-1" v-if="task.description">{{ task.description }}</div>
                                                 <div class="text-[10px] text-rose-500 font-black mt-2 flex items-center gap-1 uppercase tracking-tighter" v-if="task.due_date">
                                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                                    Deadline: {{ task.due_date }}
+                                                    Deadline: {{ formatDate(task.due_date) }}
                                                 </div>
                                             </div>
                                         </div>

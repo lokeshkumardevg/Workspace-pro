@@ -170,9 +170,9 @@ const statusClass = (s) => ({
                                 </td>
                                 <td class="px-5 py-4">
                                     <div class="text-sm text-gray-700">
-                                        <span class="font-semibold">{{ leave.from_date }}</span>
+                                        <span class="font-semibold">{{ formatDate(leave.from_date) }}</span>
                                         <span class="text-gray-400 mx-1">→</span>
-                                        <span class="font-semibold">{{ leave.to_date }}</span>
+                                        <span class="font-semibold">{{ formatDate(leave.to_date) }}</span>
                                     </div>
                                     <p class="text-xs text-gray-400 mt-0.5 line-clamp-1">{{ leave.reason }}</p>
                                 </td>
