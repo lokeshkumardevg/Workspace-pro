@@ -7,12 +7,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 Route::get('/', function () {
-    return Inertia::render('Welcome', [
-        'canLogin' => Route::has('login'),
-        'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
-    ]);
+    return redirect()->route('login');
 });
 
 Route::get('/dashboard', function (Request $request) {
@@ -56,7 +51,28 @@ Route::get('/dashboard', function (Request $request) {
         $stats['pending_leaves'] = \App\Models\LeaveRequest::where('user_id', $user->id)->where('status', 'pending')->count();
     }
 
-    return Inertia::render('Dashboard', ['stats' => $stats]);
+    // Advanced Metrics: Project Progress
+    $stats['project_progress'] = \App\Models\Project::withCount([
+        'tasks',
+        'tasks as completed_tasks_count' => function ($query) {
+            $query->where('status', 'completed');
+        }
+    ])->get()->map(function ($project) {
+        $project->percentage = $project->tasks_count > 0
+            ? round(($project->completed_tasks_count / $project->tasks_count) * 100)
+            : 0;
+        return $project;
+    });
+
+    // Recent Activity Feed
+    $stats['recent_activity'] = \App\Models\TaskComment::with('user', 'task')
+        ->latest()
+        ->limit(6)
+        ->get();
+
+    return Inertia::render('Dashboard', [
+        'stats' => $stats
+    ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
@@ -73,6 +89,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/tasks', [\App\Http\Controllers\TaskController::class, 'store'])->name('tasks.store');
     Route::get('/tasks/export', [\App\Http\Controllers\TaskController::class, 'export'])->name('tasks.export');
     Route::put('/tasks/{task}/status', [\App\Http\Controllers\TaskController::class, 'updateStatus'])->name('tasks.status');
+    Route::put('/tasks/{task}/reassign', [\App\Http\Controllers\TaskController::class, 'reassign'])->name('tasks.reassign');
     Route::post('/tasks/{task}/comments', [\App\Http\Controllers\TaskCommentController::class, 'store'])->name('tasks.comments.store');
 
     // Attendance
@@ -99,6 +116,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/users/{user}/sync-roles', [\App\Http\Controllers\UserController::class, 'syncRoles'])->name('users.sync-roles');
 
     Route::resource('roles', \App\Http\Controllers\RoleController::class)->only(['index', 'store', 'update', 'destroy']);
+
+    // Notifications
+    Route::post('/notifications/{id}/read', [\App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::post('/notifications/read-all', [\App\Http\Controllers\NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
 });
 
 require __DIR__ . '/auth.php';

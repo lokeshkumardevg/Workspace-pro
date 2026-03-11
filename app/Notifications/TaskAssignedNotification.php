@@ -40,8 +40,8 @@ class TaskAssignedNotification extends Notification
     {
         return [
             'task_id' => $this->task->id,
-            'title' => $this->task->title,
-            'message' => 'New task assigned: ' . $this->task->title,
+            'title' => 'New Task: ' . $this->task->title,
+            'message' => 'You have been assigned to ' . $this->task->title,
             'type' => 'task_assigned'
         ];
     }

@@ -105,6 +105,26 @@ const postComment = () => {
 const handleFile = (e) => {
     commentForm.attachment = e.target.files[0];
 };
+
+// Reassign Task
+const showReassignModal = ref(false);
+const reassignForm = useForm({
+    assigned_to: '',
+});
+
+const openReassignModal = (task) => {
+    selectedTask.value = task;
+    reassignForm.assigned_to = task.assigned_to;
+    showReassignModal.value = true;
+};
+
+const submitReassign = () => {
+    reassignForm.put(route('tasks.reassign', selectedTask.value.id), {
+        onSuccess: () => {
+            showReassignModal.value = false;
+        }
+    });
+};
 </script>
 
 <template>
@@ -117,26 +137,26 @@ const handleFile = (e) => {
                     Task Tracking & Performance
                 </h2>
 
-                <div class="flex flex-wrap items-center gap-4">
+                <div class="flex items-center gap-4 ml-auto">
                     <!-- Performance Widget -->
-                    <div v-if="performance !== null" class="bg-white border-2 border-[#2CA01C]/20 rounded-2xl px-5 py-3 flex items-center gap-4 shadow-sm group hover:shadow-md transition-all">
+                    <div v-if="performance !== null" class="hidden sm:flex bg-white border-2 border-[#2CA01C]/20 rounded-2xl px-5 py-2 flex items-center gap-4 shadow-sm group hover:shadow-md transition-all">
                         <div class="flex flex-col">
-                            <span class="text-[10px] font-black text-[#2CA01C] uppercase tracking-widest">{{ performanceLabel }}</span>
-                            <span class="text-2xl font-black text-gray-900 leading-none">{{ performance }}%</span>
+                            <span class="text-[10px] font-black text-[#2CA01C] uppercase tracking-widest leading-tight">{{ performanceLabel }}</span>
+                            <span class="text-xl font-black text-gray-900 leading-none">{{ performance }}%</span>
                         </div>
-                        <div class="w-16 bg-gray-100 rounded-full h-2.5 overflow-hidden shadow-inner border border-gray-50">
+                        <div class="w-12 bg-gray-100 rounded-full h-2 overflow-hidden shadow-inner border border-gray-50">
                             <div class="bg-gradient-to-r from-[#2CA01C] to-[#238016] h-full rounded-full transition-all duration-700" :style="{ width: performance + '%' }"></div>
                         </div>
                     </div>
 
                     <div class="flex items-center gap-2">
-                        <button @click="exportTasks" class="bg-white hover:bg-gray-50 text-gray-700 px-5 py-2.5 rounded-xl font-bold border-2 border-gray-100 shadow-sm transition-all flex items-center gap-2 text-sm uppercase">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                            Export Excel
+                        <button @click="exportTasks" class="bg-white hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-xl font-bold border-2 border-gray-100 shadow-sm transition-all flex items-center gap-2 text-[11px] uppercase whitespace-nowrap">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                            Export
                         </button>
 
-                        <button v-if="$page.props.auth.user.permissions.includes('manage tasks') || $page.props.auth.user.roles.includes('Super Admin')" @click="showCreateModal = true" class="bg-[#2CA01C] hover:bg-[#238016] text-white px-6 py-2.5 rounded-xl font-bold shadow-md hover:shadow-xl transition-all flex items-center gap-2 text-sm uppercase active:scale-95">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" /></svg>
+                        <button v-if="$page.props.auth.user.permissions.includes('manage tasks') || $page.props.auth.user.roles.includes('Super Admin')" @click="showCreateModal = true" class="bg-[#2CA01C] hover:bg-[#238016] text-white px-5 py-2.5 rounded-xl font-bold shadow-md hover:shadow-xl transition-all flex items-center gap-2 text-[11px] uppercase whitespace-nowrap active:scale-95">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" /></svg>
                             Assign New
                         </button>
                     </div>
@@ -227,7 +247,16 @@ const handleFile = (e) => {
                                                     <div class="w-full h-full rounded-full" :class="task.status === 'completed' ? 'bg-[#2CA01C]' : 'bg-amber-400'"></div>
                                                 </div>
                                             </div>
-                                            <div class="text-xs font-black text-gray-900 uppercase tracking-tight">{{ task.assignee ? task.assignee.name : 'Idle' }}</div>
+                                            <div class="flex flex-col">
+                                                <div class="flex items-center gap-2">
+                                                    <span class="text-xs font-black text-gray-900 uppercase tracking-tight">{{ task.assignee ? task.assignee.name : 'Idle' }}</span>
+                                                    <button v-if="$page.props.auth.user.permissions.includes('manage tasks') || $page.props.auth.user.roles.includes('Super Admin')" 
+                                                            @click="openReassignModal(task)" 
+                                                            class="text-[9px] text-[#2CA01C] font-black hover:underline uppercase tracking-tighter">
+                                                        (Reassign)
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </td>
                                     <td class="px-6 py-5 whitespace-nowrap">
@@ -391,6 +420,49 @@ const handleFile = (e) => {
                                 Create Task
                             </button>
                             <button type="button" @click="showCreateModal = false" class="bg-white border-2 border-gray-200 text-gray-700 px-10 py-3 rounded-2xl font-black uppercase text-sm hover:bg-gray-50 transition-all">
+                                Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reassign Task Modal -->
+        <div v-if="showReassignModal" class="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div class="fixed inset-0 bg-gray-900 bg-opacity-70 transition-opacity backdrop-blur-md" @click="showReassignModal = false"></div>
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                <div class="inline-block align-bottom bg-white rounded-[2rem] text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md w-full">
+                    <form @submit.prevent="submitReassign">
+                        <div class="bg-white px-8 pt-8 pb-4">
+                            <h3 class="text-2xl font-black text-gray-900 mb-6 uppercase tracking-tighter flex items-center gap-4">
+                                <span class="bg-indigo-50 p-2.5 rounded-2xl">
+                                    <svg class="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                                </span>
+                                Reassign Task
+                            </h3>
+                            <div class="space-y-4">
+                                <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Original Title</p>
+                                    <p class="text-sm font-bold text-gray-800">{{ selectedTask.title }}</p>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Select New Owner</label>
+                                    <select v-model="reassignForm.assigned_to" class="w-full bg-gray-50 border-gray-100 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 text-sm font-bold shadow-inner" required>
+                                        <option value="" disabled>Select Staff Member</option>
+                                        <option v-for="u in users" :key="u.id" :value="u.id" :disabled="u.id === selectedTask.assigned_to">
+                                            {{ u.name }} {{ u.id === selectedTask.assigned_to ? '(Current)' : '' }}
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-gray-50 px-8 py-6 flex flex-row-reverse gap-4">
+                            <button type="submit" :disabled="reassignForm.processing" class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-2.5 rounded-xl font-black uppercase text-xs shadow-lg transition-all disabled:opacity-50">
+                                Update Assignment
+                            </button>
+                            <button type="button" @click="showReassignModal = false" class="text-gray-500 px-6 py-2.5 rounded-xl font-black uppercase text-xs hover:bg-gray-100 transition-colors">
                                 Cancel
                             </button>
                         </div>

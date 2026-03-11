@@ -174,4 +174,21 @@ class TaskController extends Controller
 
         return redirect()->back()->with('success', '✅ Task status updated. Performance metrics recalculated.');
     }
+
+    public function reassign(Request $request, Task $task)
+    {
+        $request->validate([
+            'assigned_to' => 'required|exists:users,id',
+        ]);
+
+        $task->update(['assigned_to' => $request->assigned_to]);
+
+        // Notify New Assignee
+        $newAssignee = User::find($request->assigned_to);
+        if ($newAssignee) {
+            $newAssignee->notify(new \App\Notifications\TaskAssignedNotification($task));
+        }
+
+        return redirect()->back()->with('success', '✅ Task successfully reassigned to ' . ($newAssignee->name ?? 'new member') . '.');
+    }
 }

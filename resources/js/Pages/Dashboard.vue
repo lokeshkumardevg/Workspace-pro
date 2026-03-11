@@ -209,44 +209,62 @@ const greeting = computed(() => {
                     </div>
                 </div>
 
-                <!-- Bottom Row: Activity + Profile  -->
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-                    <!-- Activity Feed Placeholder -->
-                    <div class="lg:col-span-2 bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-                        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                            <h3 class="font-bold text-gray-900 text-sm">Recent Activity</h3>
-                            <span class="text-xs text-gray-400">Today</span>
+                <!-- Advanced Middle Row: Project Progress -->
+                <div v-if="stats.project_progress?.length > 0">
+                    <h2 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 px-1 text-indigo-900 border-l-4 border-indigo-600 pl-3 ml-1">Project Milestones</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div v-for="proj in stats.project_progress" :key="proj.id" class="bg-white border border-gray-200 rounded-3xl p-5 shadow-sm hover:shadow-xl transition-all duration-300 group">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-xs font-black text-gray-900 uppercase tracking-tight truncate max-w-[120px] group-hover:text-indigo-600 transition-colors">{{ proj.name }}</span>
+                                <span class="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100">{{ proj.percentage }}%</span>
+                            </div>
+                            <div class="w-full bg-gray-50 h-2 rounded-full overflow-hidden mb-3 shadow-inner">
+                                <div class="h-full bg-gradient-to-r from-indigo-500 to-purple-600 transition-all duration-1000 shadow-[0_0_10px_rgba(79,70,229,0.3)]" :style="{ width: proj.percentage + '%' }"></div>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <p class="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">{{ proj.completed_tasks_count }} / {{ proj.tasks_count }} Tasks Done</p>
+                                <svg class="w-3 h-3 text-gray-300 group-hover:text-indigo-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"/></svg>
+                            </div>
                         </div>
-                        <div class="divide-y divide-gray-50">
-                            <div class="px-6 py-4 flex items-center gap-4">
-                                <div class="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                                    <svg class="w-4 h-4 text-[#2CA01C]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    </div>
+                </div>
+
+                <!-- Bottom Row: Activity + Profile  -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                    <!-- Real Activity Feed -->
+                    <div class="lg:col-span-2 bg-white border border-gray-100 rounded-[2rem] shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+                        <div class="px-8 py-6 border-b border-gray-50 flex items-center justify-between bg-gray-50/30">
+                            <h3 class="font-black text-gray-900 text-[10px] uppercase tracking-widest flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                                Live Coordination Feed
+                            </h3>
+                            <span class="text-[10px] font-black text-indigo-600 bg-white px-3 py-1 rounded-xl shadow-sm border border-gray-100 uppercase">Updates</span>
+                        </div>
+                        <div class="divide-y divide-gray-50 flex-1 overflow-y-auto max-h-[400px] scrollbar-thin">
+                            <div v-for="activity in stats.recent_activity" :key="activity.id" class="px-8 py-5 flex items-start gap-5 hover:bg-gray-50/50 transition-colors group">
+                                <div class="w-11 h-11 rounded-2xl bg-white shadow-sm flex-shrink-0 border border-gray-100 p-0.5 overflow-hidden group-hover:border-indigo-200 transition-colors">
+                                     <img :src="'https://ui-avatars.com/api/?name='+activity.user.name+'&background=random&color=fff'" class="w-full h-full rounded-[14px]" />
                                 </div>
                                 <div class="flex-1 min-w-0">
-                                    <p class="text-sm font-semibold text-gray-900">System Initialized</p>
-                                    <p class="text-xs text-gray-500 truncate">Roles, permissions and users have been seeded into the database.</p>
+                                    <div class="flex items-center justify-between mb-1">
+                                        <p class="text-sm font-black text-gray-900 leading-tight">
+                                            {{ activity.user.name }} 
+                                            <span class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mx-1 opacity-60">Posted on</span> 
+                                            <span class="text-indigo-600 group-hover:underline cursor-pointer">{{ activity.task.title }}</span>
+                                        </p>
+                                        <span class="text-[9px] text-gray-300 font-black uppercase tracking-tighter">{{ new Date(activity.created_at).toLocaleTimeString() }}</span>
+                                    </div>
+                                    <p class="text-xs text-gray-500 line-clamp-2 italic font-medium leading-relaxed bg-gray-50/50 p-2 rounded-xl mt-2 border border-gray-100/50 group-hover:bg-white transition-colors">"{{ activity.comment }}"</p>
+                                    <div v-if="activity.attachment" class="flex items-center gap-1.5 text-[8px] font-black text-[#2CA01C] uppercase tracking-widest mt-3 bg-green-50 w-max px-2.5 py-1 rounded-full border border-green-100">
+                                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                        Screenshot Attached
+                                    </div>
                                 </div>
-                                <span class="text-xs text-gray-400 flex-shrink-0">just now</span>
                             </div>
-                            <div class="px-6 py-4 flex items-center gap-4">
-                                <div class="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                                    <svg class="w-4 h-4 text-[#0077C5]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <p class="text-sm font-semibold text-gray-900">Logged in Successfully</p>
-                                    <p class="text-xs text-gray-500 truncate">Welcome back! Your session has been started.</p>
-                                </div>
-                                <span class="text-xs text-gray-400 flex-shrink-0">today</span>
-                            </div>
-                            <div class="px-6 py-4 flex items-center gap-4 opacity-50">
-                                <div class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-                                    <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <p class="text-sm font-semibold text-gray-900">More activity will appear here</p>
-                                    <p class="text-xs text-gray-500 truncate">As your team interacts with the system, updates will show here.</p>
-                                </div>
+                            <div v-if="stats.recent_activity?.length === 0" class="flex flex-col items-center justify-center py-28 opacity-20 bg-gray-50/20">
+                                <svg class="w-16 h-16 mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"></path></svg>
+                                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">No recent activity detected</p>
                             </div>
                         </div>
                     </div>

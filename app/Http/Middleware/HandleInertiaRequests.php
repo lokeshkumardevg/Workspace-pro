@@ -38,6 +38,7 @@ class HandleInertiaRequests extends Middleware
                     'email' => $request->user()->email,
                     'roles' => $request->user()->getRoleNames(),
                     'permissions' => $request->user()->getAllPermissions()->pluck('name'),
+                    'unread_notifications' => $request->user()->unreadNotifications,
                 ] : null,
             ],
             'flash' => [

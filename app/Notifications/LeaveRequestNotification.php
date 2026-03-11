@@ -41,8 +41,9 @@ class LeaveRequestNotification extends Notification
     {
         return [
             'leave_request_id' => $this->leaveRequest->id,
+            'title' => 'Leave Request: ' . $this->leaveRequest->user->name,
             'user_name' => $this->leaveRequest->user->name,
-            'message' => 'New leave request from ' . $this->leaveRequest->user->name,
+            'message' => $this->leaveRequest->user->name . ' is requesting ' . $this->leaveRequest->days . ' days off.',
             'type' => 'leave_request'
         ];
     }

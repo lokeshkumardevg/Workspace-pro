@@ -49,10 +49,23 @@ class AttendanceController extends Controller
         // Check if today is a holiday
         $isTodayHoliday = $this->holidayService->isHoliday(Carbon::today());
 
+        // Personal Monthly Stats
+        $month = now()->month;
+        $year = now()->year;
+        $personalStats = [
+            'present' => Attendance::where('user_id', $user->id)
+                ->whereMonth('date', $month)
+                ->whereYear('date', $year)
+                ->where('status', 'present')
+                ->count(),
+            'working_days' => $this->holidayService->getWorkingDaysCount($month, $year)
+        ];
+
         return Inertia::render('Attendance/Index', [
             'attendances' => $attendances,
             'todayAttendance' => $todayAttendance,
             'isTodayHoliday' => $isTodayHoliday,
+            'personalStats' => $personalStats,
             'filters' => $request->only('search'),
             'officeLocation' => [
                 'lat' => self::OFFICE_LAT,

@@ -5,7 +5,7 @@ import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import NavLink from '@/Components/NavLink.vue';
 import Toast from '@/Components/Toast.vue';
-import { Link } from '@inertiajs/vue3';
+import { Link, router } from '@inertiajs/vue3';
 
 const showingNavigationDropdown = ref(false);
 const showingUserManagement = ref(false);
@@ -16,6 +16,14 @@ const isAttendanceRoute = () => route().current('attendance.index') || route().c
 
 showingUserManagement.value = isUserRoute();
 showingAttendance.value = isAttendanceRoute();
+
+const markAsRead = (notif) => {
+    router.post(route('notifications.read', notif.id), {}, { preserveScroll: true });
+};
+
+const markAllAsRead = () => {
+    router.post(route('notifications.read-all'), {}, { preserveScroll: true });
+};
 </script>
 
 <template>
@@ -37,28 +45,29 @@ showingAttendance.value = isAttendanceRoute();
                 <nav class="px-3 space-y-1 text-sm font-medium">
 
                     <!-- Dashboard -->
-                    <NavLink :href="route('dashboard')" :active="route().current('dashboard')" class="text-indigo-100 hover:bg-indigo-800 hover:text-white rounded-lg px-3 py-2.5 flex items-center gap-3 transition-colors">
+                    <NavLink :href="route('dashboard')" :active="route().current('dashboard')" class="w-full text-indigo-100 hover:bg-indigo-800 hover:text-white rounded-lg px-3 py-2.5 flex items-center gap-3 transition-colors">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg>
                         Dashboard
                     </NavLink>
 
                     <!-- Projects -->
                     <NavLink v-if="$page.props.auth.user.permissions.includes('manage projects') || $page.props.auth.user.roles.includes('Super Admin')"
-                        :href="route('projects.index')" :active="route().current('projects.index')" class="text-indigo-100 hover:bg-indigo-800 hover:text-white rounded-lg px-3 py-2.5 flex items-center gap-3 transition-colors">
+                        :href="route('projects.index')" :active="route().current('projects.index')" class="w-full text-indigo-100 hover:bg-indigo-800 hover:text-white rounded-lg px-3 py-2.5 flex items-center gap-3 transition-colors">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
                         Projects
                     </NavLink>
-
+                    
                     <!-- Tasks -->
                     <NavLink v-if="$page.props.auth.user.permissions.includes('view tasks') || $page.props.auth.user.roles.includes('Super Admin')"
-                        :href="route('tasks.index')" :active="route().current('tasks.index')" class="text-indigo-100 hover:bg-indigo-800 hover:text-white rounded-lg px-3 py-2.5 flex items-center gap-3 transition-colors">
-                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+                        :href="route('tasks.index')" :active="route().current('tasks.index')" 
+                        class="w-full text-indigo-100 hover:bg-indigo-800 hover:text-white rounded-lg px-3 py-2.5 flex items-center gap-3 transition-colors">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
                         Tasks
                     </NavLink>
 
                     <!-- Leads CRM -->
                     <NavLink v-if="$page.props.auth.user.permissions.includes('view leads') || $page.props.auth.user.roles.includes('Super Admin')"
-                        :href="route('leads.index')" :active="route().current('leads.index')" class="text-indigo-100 hover:bg-indigo-800 hover:text-white rounded-lg px-3 py-2.5 flex items-center gap-3 transition-colors">
+                        :href="route('leads.index')" :active="route().current('leads.index')" class="w-full text-indigo-100 hover:bg-indigo-800 hover:text-white rounded-lg px-3 py-2.5 flex items-center gap-3 transition-colors">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                         Leads CRM
                     </NavLink>
@@ -74,12 +83,12 @@ showingAttendance.value = isAttendanceRoute();
                             <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': showingAttendance }" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
                         <div v-show="showingAttendance" class="mt-1 space-y-1 pl-10">
-                            <NavLink :href="route('attendance.index')" :active="route().current('attendance.index')" class="text-indigo-200 hover:text-white hover:bg-indigo-800 rounded-lg px-3 py-2 flex items-center text-sm transition-colors gap-2">
+                            <NavLink :href="route('attendance.index')" :active="route().current('attendance.index')" class="w-full text-indigo-200 hover:text-white hover:bg-indigo-800 rounded-lg px-3 py-2 flex items-center text-sm transition-colors gap-2">
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
                                 Daily Logs
                             </NavLink>
                             <NavLink v-if="$page.props.auth.user.permissions.includes('download reports') || $page.props.auth.user.roles.includes('Super Admin')"
-                                     :href="route('attendance.report')" :active="route().current('attendance.report')" class="text-indigo-200 hover:text-white hover:bg-indigo-800 rounded-lg px-3 py-2 flex items-center text-sm transition-colors gap-2">
+                                     :href="route('attendance.report')" :active="route().current('attendance.report')" class="w-full text-indigo-200 hover:text-white hover:bg-indigo-800 rounded-lg px-3 py-2 flex items-center text-sm transition-colors gap-2">
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                                 Monthly Reports
                             </NavLink>
@@ -88,7 +97,7 @@ showingAttendance.value = isAttendanceRoute();
 
                     <!-- Leave Management -->
                     <NavLink v-if="$page.props.auth.user.permissions.includes('view leaves') || $page.props.auth.user.permissions.includes('manage leaves') || $page.props.auth.user.roles.includes('Super Admin')"
-                        :href="route('leaves.index')" :active="route().current('leaves.*')" class="text-indigo-100 hover:bg-indigo-800 hover:text-white rounded-lg px-3 py-2.5 flex items-center gap-3 transition-colors">
+                        :href="route('leaves.index')" :active="route().current('leaves.*')" class="w-full text-indigo-100 hover:bg-indigo-800 hover:text-white rounded-lg px-3 py-2.5 flex items-center gap-3 transition-colors">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                         Leave Management
                         <!-- Pending badge -->
@@ -160,15 +169,44 @@ showingAttendance.value = isAttendanceRoute();
                 <!-- Right: Notifications + User -->
                 <div class="flex items-center gap-2">
 
-                    <!-- Pending Leaves Bell (for Managers/HR) -->
-                    <Link v-if="$page.props.auth.user.permissions.includes('approve leaves')" :href="route('leaves.index')"
-                          class="relative p-2 rounded-full text-gray-500 hover:bg-gray-100 transition-colors">
-                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
-                        <span v-if="$page.props.stats?.pending_leaves > 0"
-                               class="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] font-bold text-white flex items-center justify-center animate-bounce">
-                            {{ $page.props.stats?.pending_leaves }}
-                        </span>
-                    </Link>
+                    <!-- Notification Bell -->
+                    <Dropdown v-if="$page.props.auth.user" align="right" width="64">
+                        <template #trigger>
+                            <button class="relative p-2 rounded-full text-gray-500 hover:bg-gray-100 transition-colors focus:outline-none">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                                <span v-if="$page.props.auth.user.unread_notifications?.length > 0"
+                                       class="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] font-bold text-white flex items-center justify-center animate-bounce">
+                                    {{ $page.props.auth.user.unread_notifications.length }}
+                                </span>
+                            </button>
+                        </template>
+                        <template #content>
+                            <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                                <h3 class="text-[10px] font-black uppercase tracking-widest text-gray-900">Notifications</h3>
+                                <button v-if="$page.props.auth.user.unread_notifications?.length > 0" 
+                                        @click="markAllAsRead" 
+                                        class="text-[9px] font-black text-indigo-600 uppercase hover:underline">Mark all read</button>
+                            </div>
+                            <div class="max-h-80 overflow-y-auto scrollbar-thin">
+                                <div v-for="notif in $page.props.auth.user.unread_notifications" :key="notif.id" 
+                                     class="p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer group"
+                                     @click="markAsRead(notif)">
+                                    <div class="flex items-start gap-3">
+                                        <div class="h-2 w-2 rounded-full bg-indigo-500 mt-1.5 flex-shrink-0"></div>
+                                        <div>
+                                            <p class="text-xs font-bold text-gray-800 leading-tight group-hover:text-indigo-600 transition-colors">{{ notif.data.title || 'New Notification' }}</p>
+                                            <p class="text-[10px] text-gray-500 mt-1 line-clamp-2 leading-relaxed">{{ notif.data.message }}</p>
+                                            <p class="text-[8px] text-gray-400 mt-2 uppercase font-black tracking-tighter">{{ new Date(notif.created_at).toLocaleString() }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div v-if="$page.props.auth.user.unread_notifications?.length === 0" class="p-8 text-center opacity-30">
+                                    <svg class="w-10 h-10 mx-auto text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                                    <p class="text-[10px] font-black uppercase tracking-widest">No new alerts</p>
+                                </div>
+                            </div>
+                        </template>
+                    </Dropdown>
 
                     <Dropdown align="right" width="48">
                         <template #trigger>
@@ -191,6 +229,8 @@ showingAttendance.value = isAttendanceRoute();
             <div v-if="showingNavigationDropdown" class="md:hidden absolute top-16 left-0 w-full bg-indigo-900 border-b z-20 shadow-xl">
                 <nav class="px-4 py-3 space-y-1 text-white text-sm">
                     <a :href="route('dashboard')" class="block px-3 py-2 rounded-md hover:bg-indigo-800">Dashboard</a>
+                    <a v-if="$page.props.auth.user.permissions.includes('view tasks') || $page.props.auth.user.roles.includes('Super Admin')"
+                       :href="route('tasks.index')" class="block px-3 py-2 rounded-md hover:bg-indigo-800">Tasks</a>
                     <a :href="route('attendance.index')" class="block px-3 py-2 rounded-md hover:bg-indigo-800">Attendance</a>
                     <a :href="route('leaves.index')" class="block px-3 py-2 rounded-md hover:bg-indigo-800">Leave Management</a>
                 </nav>
