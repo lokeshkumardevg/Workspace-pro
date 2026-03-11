@@ -1,0 +1,104 @@
+<?php
+
+use App\Http\Controllers\ProfileController;
+use Illuminate\Foundation\Application;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+
+Route::get('/', function () {
+    return Inertia::render('Welcome', [
+        'canLogin' => Route::has('login'),
+        'canRegister' => Route::has('register'),
+        'laravelVersion' => Application::VERSION,
+        'phpVersion' => PHP_VERSION,
+    ]);
+});
+
+Route::get('/dashboard', function (Request $request) {
+    $user = $request->user();
+    $isPrivileged = $user->hasRole(['Super Admin', 'Admin', 'HR', 'Manager']);
+
+    $stats = [];
+
+    // Projects
+    if ($user->can('manage projects') || $isPrivileged) {
+        $stats['projects'] = \App\Models\Project::count();
+    } else {
+        $stats['projects'] = \App\Models\Project::whereHas('tasks', function ($q) use ($user) {
+            $q->where('assigned_to', $user->id);
+        })->distinct()->count();
+    }
+
+    // Tasks
+    if ($user->can('view tasks') || $isPrivileged) {
+        $stats['tasks'] = \App\Models\Task::count();
+    } else {
+        $stats['tasks'] = \App\Models\Task::where('assigned_to', $user->id)->count();
+    }
+
+    // Leads
+    if ($user->can('view leads') || $isPrivileged) {
+        $stats['leads'] = \App\Models\Lead::count();
+    }
+
+    // Attendance
+    if ($isPrivileged) {
+        $stats['attendance_today'] = \App\Models\Attendance::where('date', \Carbon\Carbon::today())->count();
+    } else {
+        $stats['attendance_today'] = \App\Models\Attendance::where('user_id', $user->id)->count(); // Career total or month? Let's say month
+    }
+
+    // Leaves
+    if ($user->can('approve leaves') || $isPrivileged) {
+        $stats['pending_leaves'] = \App\Models\LeaveRequest::where('status', 'pending')->count();
+    } else {
+        $stats['pending_leaves'] = \App\Models\LeaveRequest::where('user_id', $user->id)->where('status', 'pending')->count();
+    }
+
+    return Inertia::render('Dashboard', ['stats' => $stats]);
+})->middleware(['auth', 'verified'])->name('dashboard');
+
+Route::middleware('auth')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // Projects
+    Route::get('/projects', [\App\Http\Controllers\ProjectController::class, 'index'])->name('projects.index');
+    Route::post('/projects', [\App\Http\Controllers\ProjectController::class, 'store'])->name('projects.store');
+
+    // Tasks
+    Route::get('/tasks', [\App\Http\Controllers\TaskController::class, 'index'])->name('tasks.index');
+    Route::post('/tasks', [\App\Http\Controllers\TaskController::class, 'store'])->name('tasks.store');
+    Route::get('/tasks/export', [\App\Http\Controllers\TaskController::class, 'export'])->name('tasks.export');
+    Route::put('/tasks/{task}/status', [\App\Http\Controllers\TaskController::class, 'updateStatus'])->name('tasks.status');
+    Route::post('/tasks/{task}/comments', [\App\Http\Controllers\TaskCommentController::class, 'store'])->name('tasks.comments.store');
+
+    // Attendance
+    Route::get('/attendance', [\App\Http\Controllers\AttendanceController::class, 'index'])->name('attendance.index');
+    Route::post('/attendance/clock-in', [\App\Http\Controllers\AttendanceController::class, 'clockIn'])->name('attendance.clock-in');
+    Route::post('/attendance/clock-out', [\App\Http\Controllers\AttendanceController::class, 'clockOut'])->name('attendance.clock-out');
+    Route::get('/attendance/export', [\App\Http\Controllers\AttendanceController::class, 'export'])->name('attendance.export');
+    Route::get('/attendance/report', [\App\Http\Controllers\AttendanceController::class, 'report'])->name('attendance.report');
+
+    // Leads (CRM)
+    Route::get('/leads', [\App\Http\Controllers\LeadController::class, 'index'])->name('leads.index');
+    Route::post('/leads', [\App\Http\Controllers\LeadController::class, 'store'])->name('leads.store');
+    Route::put('/leads/{lead}/status', [\App\Http\Controllers\LeadController::class, 'updateStatus'])->name('leads.status');
+
+    // Leave Management
+    Route::get('/leaves', [\App\Http\Controllers\LeaveController::class, 'index'])->name('leaves.index');
+    Route::post('/leaves', [\App\Http\Controllers\LeaveController::class, 'store'])->name('leaves.store');
+    Route::post('/leaves/{leave}/review', [\App\Http\Controllers\LeaveController::class, 'review'])->name('leaves.review');
+    Route::get('/leaves/download', [\App\Http\Controllers\LeaveController::class, 'downloadReport'])->name('leaves.download');
+
+    // Users and Roles
+    Route::get('/users', [\App\Http\Controllers\UserController::class, 'index'])->name('users.index');
+    Route::put('/users/{user}', [\App\Http\Controllers\UserController::class, 'update'])->name('users.update');
+    Route::post('/users/{user}/sync-roles', [\App\Http\Controllers\UserController::class, 'syncRoles'])->name('users.sync-roles');
+
+    Route::resource('roles', \App\Http\Controllers\RoleController::class)->only(['index', 'store', 'update', 'destroy']);
+});
+
+require __DIR__ . '/auth.php';
