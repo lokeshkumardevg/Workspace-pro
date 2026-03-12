@@ -162,7 +162,7 @@ const formatDate = (d) => {
                             Export
                         </button>
 
-                        <button v-if="$page.props.auth.user.permissions.includes('manage tasks') || $page.props.auth.user.roles.includes('Super Admin')" @click="showCreateModal = true" class="bg-[#2CA01C] hover:bg-[#238016] text-white px-5 py-2.5 rounded-xl font-bold shadow-md hover:shadow-xl transition-all flex items-center gap-2 text-[11px] uppercase whitespace-nowrap active:scale-95">
+                        <button v-if="$page.props.auth.user.permissions.includes('manage tasks') || $page.props.auth.user.roles.some(r => ['Super Admin', 'Admin', 'Manager', 'Team Lead', 'Leader'].includes(r))" @click="showCreateModal = true" class="bg-[#2CA01C] hover:bg-[#238016] text-white px-5 py-2.5 rounded-xl font-bold shadow-md hover:shadow-xl transition-all flex items-center gap-2 text-[11px] uppercase whitespace-nowrap active:scale-95">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" /></svg>
                             Assign New
                         </button>
@@ -266,7 +266,7 @@ const formatDate = (d) => {
                                             <div class="flex flex-col">
                                                 <div class="flex items-center gap-2">
                                                     <span class="text-xs font-black text-gray-900 uppercase tracking-tight">{{ task.assignee ? task.assignee.name : 'Idle' }}</span>
-                                                    <button v-if="$page.props.auth.user.permissions.includes('manage tasks') || $page.props.auth.user.roles.includes('Super Admin')" 
+                                                    <button v-if="$page.props.auth.user.permissions.includes('manage tasks') || $page.props.auth.user.roles.some(r => ['Super Admin', 'Admin', 'Manager', 'Team Lead', 'Leader'].includes(r))" 
                                                             @click="openReassignModal(task)" 
                                                             class="text-[9px] text-[#2CA01C] font-black hover:underline uppercase tracking-tighter">
                                                         (Reassign)

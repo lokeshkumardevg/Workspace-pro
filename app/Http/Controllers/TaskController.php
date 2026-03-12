@@ -15,7 +15,9 @@ class TaskController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $isPrivileged = $user->roles->whereIn('name', ['Super Admin', 'Admin', 'HR', 'Manager'])->count() > 0;
+        // Check for specific roles or the 'manage tasks' permission
+        $isPrivileged = $user->hasPermissionTo('manage tasks') ||
+            $user->roles->whereIn('name', ['Super Admin', 'Admin', 'HR', 'Manager', 'Team Lead', 'Leader'])->count() > 0;
 
         $tasksQuery = Task::with('project', 'assignee', 'creator', 'comments.user');
 
