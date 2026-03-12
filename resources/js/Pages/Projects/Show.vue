@@ -325,13 +325,14 @@ const isSuperAdmin = computed(() => usePage().props.auth.user.roles.includes('Su
         </div>
     </AuthenticatedLayout>
 
-    <style>
-    @media print {
-        .no-print { display: none !important; }
-        .print-only { display: block !important; }
-        body { background: white !important; }
-        .max-w-7xl { max-width: 100% !important; margin: 0 !important; }
-        .p-16 { padding: 0 !important; }
-    }
-    </style>
 </template>
+
+<style>
+@media print {
+    .no-print { display: none !important; }
+    .print-only { display: block !important; }
+    body { background: white !important; }
+    .max-w-7xl { max-width: 100% !important; margin: 0 !important; }
+    .p-16 { padding: 0 !important; }
+}
+</style>

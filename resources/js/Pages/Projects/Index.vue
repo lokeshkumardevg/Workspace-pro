@@ -1,7 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Pagination from '@/Components/Pagination.vue';
-import { Head, useForm, router } from '@inertiajs/vue3';
+import { Head, useForm, router, Link } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
 import debounce from 'lodash/debounce';
 
@@ -87,8 +87,10 @@ const createProject = () => {
                             <tbody class="bg-white divide-y divide-gray-100">
                                 <tr v-for="project in projects.data" :key="project.id" class="hover:bg-gray-50/50 transition-colors">
                                     <td class="px-6 py-4">
-                                        <div class="text-sm font-bold text-gray-900">{{ project.name }}</div>
-                                        <div class="text-sm text-gray-500 truncate max-w-xs">{{ project.description }}</div>
+                                        <div class="flex flex-col">
+                                            <Link :href="route('projects.show', project.id)" class="text-sm font-bold text-gray-900 hover:text-indigo-600 transition-colors">{{ project.name }}</Link>
+                                            <div class="text-sm text-gray-500 truncate max-w-xs">{{ project.description }}</div>
+                                        </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                                         <div class="flex items-center gap-1">
@@ -109,9 +111,9 @@ const createProject = () => {
                                                 <img class="h-6 w-6 rounded-full" :src="'https://ui-avatars.com/api/?name='+project.creator.name+'&background=random'" alt="Avatar">
                                                 {{ project.creator.name }}
                                             </div>
-                                            <Link v-if="$page.props.auth.user.roles.includes('Super Admin')" 
+                                            <Link v-if="$page.props.auth.user.roles.some(r => ['Super Admin', 'Admin'].includes(r))" 
                                                   :href="route('projects.show', project.id)" 
-                                                  class="bg-indigo-50 text-indigo-700 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-indigo-600 hover:text-white transition-all shadow-sm flex items-center gap-2">
+                                                  class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-md active:scale-95">
                                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
                                                 Business Insights
                                             </Link>
