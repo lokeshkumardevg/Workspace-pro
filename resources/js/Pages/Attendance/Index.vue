@@ -1,6 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Pagination from '@/Components/Pagination.vue';
+import DataTable from '@/Components/DataTable.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { ref, watch, onMounted } from 'vue';
 import debounce from 'lodash/debounce';
@@ -85,8 +86,8 @@ const clockOut = async () => {
     <AuthenticatedLayout>
         <template #header>
             <div class="flex justify-between items-center w-full">
-                <h2 class="text-2xl font-bold leading-tight text-gray-800">
-                    Staff Attendance Directory
+                <h2 class="text-2xl font-black leading-tight text-gray-800 uppercase tracking-tighter">
+                    Attendance
                 </h2>
             </div>
         </template>
@@ -126,11 +127,11 @@ const clockOut = async () => {
                             <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         </div>
                         <div>
-                            <h3 class="text-lg font-black text-gray-900 leading-tight">Attendance Checkpoint</h3>
-                            <p class="text-xs text-gray-400 font-medium">Record shift securely. Protected by IP & Geofencing.</p>
+                            <h3 class="text-lg font-black text-gray-900 leading-tight">Daily Presence</h3>
+                            <p class="text-xs text-gray-400 font-medium">Record your daily shift. Protected by Geofencing.</p>
                             <div v-if="$page.props.auth.user.allowed_ip" class="mt-1.5 flex items-center gap-1.5">
-                                <span class="bg-[#2CA01C]/10 text-[#2CA01C] text-[10px] font-bold px-2 py-0.5 rounded border border-[#2CA01C]/20 uppercase tracking-tighter shadow-sm">
-                                    Trusted IP: {{ $page.props.auth.user.allowed_ip }}
+                                <span class="bg-indigo-50 text-indigo-600 text-[10px] font-bold px-2 py-0.5 rounded border border-indigo-100 uppercase tracking-tighter shadow-sm">
+                                    Home IP: {{ $page.props.auth.user.allowed_ip }}
                                 </span>
                             </div>
                         </div>
@@ -140,7 +141,7 @@ const clockOut = async () => {
                         <button v-if="!todayAttendance || !todayAttendance.clock_in" 
                                 @click="clockIn" 
                                 :disabled="isLocating"
-                                class="bg-[#2CA01C] hover:bg-[#238016] text-white px-8 py-3.5 rounded-2xl font-black shadow-lg hover:shadow-xl transition-all flex items-center gap-3 active:scale-95 group disabled:opacity-50">
+                                class="bg-indigo-600 hover:bg-gray-900 text-white px-8 py-3.5 rounded-2xl font-black shadow-lg hover:shadow-xl transition-all flex items-center gap-3 active:scale-95 group disabled:opacity-50">
                             <svg v-if="isLocating" class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                             <svg v-else class="w-6 h-6 transition-transform group-hover:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
                             {{ isLocating ? 'Verifying...' : 'Clock In' }}
@@ -167,83 +168,87 @@ const clockOut = async () => {
                     </div>
                 </div>
 
-                <!-- Table Card -->
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-2xl border border-gray-100">
-                    
-                    <!-- Toolbar -->
-                    <div class="p-6 bg-white border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div class="text-gray-900 font-black text-lg">Detailed Logs</div>
-                        <div v-if="$page.props.auth.user.permissions.includes('manage attendance') || $page.props.auth.user.roles.includes('Super Admin')" class="relative w-full sm:w-64">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                <!-- Detailed Attendance Logs -->
+                <DataTable 
+                    :headers="[
+                        { key: 'user', label: 'Employee', sortable: true },
+                        { key: 'date', label: 'Date', sortable: true },
+                        { key: 'clock_in', label: 'Clock In' },
+                        { key: 'clock_out', label: 'Clock Out' },
+                        { key: 'status', label: 'Status' }
+                    ]"
+                    :items="attendances.data"
+                    placeholder="Search by identity or employee contact..."
+                    @search="val => search = val"
+                >
+                    <template #row="{ item: log }">
+                        <td class="px-6 py-6 whitespace-nowrap">
+                            <div class="flex items-center gap-4">
+                                <div class="h-10 w-10 flex-shrink-0 relative">
+                                    <img class="h-10 w-10 rounded-xl border border-gray-100 shadow-sm" :src="'https://ui-avatars.com/api/?name='+log.user.name+'&background=random'" alt="Avatar">
+                                    <div class="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-white rounded-full flex items-center justify-center shadow-sm">
+                                        <div class="w-2 h-2 rounded-full" :class="log.status === 'present' ? 'bg-emerald-500' : (log.status === 'absent' ? 'bg-rose-500' : 'bg-amber-400')"></div>
+                                    </div>
+                                </div>
+                                <div class="text-left">
+                                    <div class="text-sm font-black text-gray-900 uppercase tracking-tight">{{ log.user.name }}</div>
+                                    <div class="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">{{ log.user.email }}</div>
+                                </div>
                             </div>
-                            <input v-model="search" type="text" placeholder="Search employee..." class="block w-full pl-9 pr-3 py-2 border border-gray-100 bg-gray-50 rounded-xl focus:ring-[#2CA01C] focus:border-[#2CA01C] text-sm shadow-inner transition-colors text-gray-700" />
-                        </div>
-                    </div>
+                        </td>
+                        <td class="px-6 py-6 whitespace-nowrap">
+                            <div class="flex items-center gap-3">
+                                <div class="p-2 bg-gray-50 rounded-lg text-gray-400">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                </div>
+                                <span class="text-xs font-black text-gray-700 uppercase tracking-widest underline decoration-indigo-100 decoration-2 underline-offset-4">{{ log.date }}</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-6 whitespace-nowrap">
+                            <div v-if="log.clock_in" class="flex flex-col gap-1.5">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-1.5 h-4 bg-emerald-500 rounded-full"></span>
+                                    <span class="text-sm font-black text-gray-900 tracking-tighter">{{ log.clock_in }}</span>
+                                </div>
+                                <div v-if="log.lat" class="flex items-center gap-1.5 px-2 py-0.5 bg-gray-50 rounded-md border border-gray-100 w-max group cursor-help" :title="'Lat: ' + log.lat + ', Lng: ' + log.lng">
+                                    <svg class="w-3 h-3 text-indigo-400 group-hover:animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                    <span class="text-[9px] text-gray-400 font-black tracking-widest uppercase">Verified Geo</span>
+                                </div>
+                            </div>
+                            <span v-else class="text-[10px] font-black text-gray-300 uppercase tracking-widest italic opacity-50 flex items-center gap-2">
+                                <span class="w-4 h-[1px] bg-gray-200"></span> Null Identity
+                            </span>
+                        </td>
+                        <td class="px-6 py-6 whitespace-nowrap">
+                            <div v-if="log.clock_out" class="flex flex-col gap-1.5">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-1.5 h-4 bg-rose-500 rounded-full"></span>
+                                    <span class="text-sm font-black text-gray-900 tracking-tighter">{{ log.clock_out }}</span>
+                                </div>
+                                <div v-if="log.out_lat" class="flex items-center gap-1.5 px-2 py-0.5 bg-gray-50 rounded-md border border-gray-100 w-max group cursor-help" :title="'Lat: ' + log.out_lat + ', Lng: ' + log.out_lng">
+                                    <svg class="w-3 h-3 text-indigo-400 group-hover:animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                    <span class="text-[9px] text-gray-400 font-black tracking-widest uppercase">Verified Geo</span>
+                                </div>
+                            </div>
+                            <span v-else class="text-[10px] font-black text-gray-300 uppercase tracking-widest italic opacity-50 flex items-center gap-2">
+                                <span class="w-4 h-[1px] bg-gray-200"></span> Still Operating
+                            </span>
+                        </td>
+                        <td class="px-6 py-6 whitespace-nowrap text-right">
+                            <span class="px-5 py-2 inline-flex text-[9px] font-black rounded-2xl uppercase tracking-[0.2em] shadow-sm border transition-all" :class="{
+                                'bg-emerald-50 text-emerald-700 border-emerald-100': log.status === 'present',
+                                'bg-rose-50 text-rose-700 border-rose-100': log.status === 'absent',
+                                'bg-amber-50 text-amber-700 border-amber-100': log.status === 'half-day'
+                            }">
+                                {{ log.status }}
+                            </span>
+                        </td>
+                    </template>
+                </DataTable>
 
-                    <!-- DataTable -->
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-100">
-                            <thead class="bg-gray-50/50">
-                                <tr class="bg-gray-50">
-                                    <th scope="col" class="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Employee</th>
-                                    <th scope="col" class="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Date</th>
-                                    <th scope="col" class="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">In (Loc)</th>
-                                    <th scope="col" class="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Out (Loc)</th>
-                                    <th scope="col" class="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-50">
-                                <tr v-for="log in attendances.data" :key="log.id" class="hover:bg-gray-50/70 transition-colors">
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="flex items-center gap-3">
-                                            <img class="h-8 w-8 rounded-full border border-gray-100 shadow-sm" :src="'https://ui-avatars.com/api/?name='+log.user.name+'&background=random'" alt="Avatar">
-                                            <div class="text-sm font-black text-gray-900 uppercase tracking-tight">{{ log.user.name }}</div>
-                                        </div>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-xs font-bold text-gray-600 flex items-center gap-2">
-                                            <svg class="w-3.5 h-3.5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                                            {{ log.date }}
-                                        </div>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                        <div v-if="log.clock_in" class="flex flex-col">
-                                            <span class="font-black text-emerald-600 tracking-tighter">{{ log.clock_in }}</span>
-                                            <span v-if="log.lat" class="text-[8px] text-gray-400 font-black tracking-widest uppercase opacity-60">
-                                                {{ log.lat }}, {{ log.lng }}
-                                            </span>
-                                        </div>
-                                        <span v-else class="text-gray-300 italic font-black text-[10px]">--:--</span>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                        <div v-if="log.clock_out" class="flex flex-col">
-                                            <span class="font-black text-rose-600 tracking-tighter">{{ log.clock_out }}</span>
-                                            <span v-if="log.out_lat" class="text-[8px] text-gray-400 font-black tracking-widest uppercase opacity-60">
-                                                {{ log.out_lat }}, {{ log.out_lng }}
-                                            </span>
-                                        </div>
-                                        <span v-else class="text-gray-300 italic font-black text-[10px]">--:--</span>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="px-3 py-1 inline-flex text-[10px] leading-5 font-black rounded-full uppercase tracking-widest shadow-sm border" :class="{
-                                            'bg-green-50 text-green-700 border-green-100': log.status === 'present',
-                                            'bg-red-50 text-red-700 border-red-100': log.status === 'absent',
-                                            'bg-amber-50 text-amber-700 border-amber-100': log.status === 'half-day'
-                                        }">
-                                            {{ log.status }}
-                                        </span>
-                                    </td>
-                                </tr>
-                                <tr v-if="attendances.data.length === 0">
-                                    <td colspan="5" class="px-6 py-16 text-center text-gray-400 font-black uppercase text-sm tracking-widest">No logs found</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                <div class="mt-8">
+                    <Pagination :links="attendances.links" />
                 </div>
-
-                <Pagination :links="attendances.links" class="mt-6" />
             </div>
         </div>
 

@@ -130,6 +130,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/announcements', [\App\Http\Controllers\AnnouncementController::class, 'index'])->name('announcements.index');
     Route::post('/announcements', [\App\Http\Controllers\AnnouncementController::class, 'store'])->name('announcements.store');
     Route::delete('/announcements/{announcement}', [\App\Http\Controllers\AnnouncementController::class, 'destroy'])->name('announcements.destroy');
+
+    // System Settings & Branding
+    Route::get('/settings', [\App\Http\Controllers\SettingsController::class, 'index'])->name('settings.index');
+    Route::post('/settings', [\App\Http\Controllers\SettingsController::class, 'update'])->name('settings.update');
 });
 
 require __DIR__ . '/auth.php';

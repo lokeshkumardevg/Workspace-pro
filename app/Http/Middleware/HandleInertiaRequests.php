@@ -46,6 +46,7 @@ class HandleInertiaRequests extends Middleware
                 'error' => session('error'),
                 'info' => session('info'),
             ],
+            'system_settings' => \App\Models\SystemSetting::all()->pluck('value', 'key'),
         ];
     }
 }

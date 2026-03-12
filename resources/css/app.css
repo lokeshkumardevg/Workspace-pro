@@ -1,3 +1,49 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer components {
+    /* Primary Action Button - Unified Style */
+    .btn-primary {
+        @apply bg-indigo-600 hover:bg-gray-900 text-white px-5 py-2.5 rounded-xl font-bold shadow-md hover:shadow-xl transition-all flex items-center gap-2 text-[11px] uppercase whitespace-nowrap active:scale-95 disabled:opacity-50;
+    }
+
+    /* Secondary/Ghost Button */
+    .btn-secondary {
+        @apply bg-white hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-xl font-bold border-2 border-gray-100 shadow-sm transition-all flex items-center gap-2 text-[11px] uppercase whitespace-nowrap active:scale-95;
+    }
+
+    /* Danger/Delete Button */
+    .btn-danger {
+        @apply bg-rose-500 hover:bg-rose-600 text-white px-4 py-2 rounded-xl font-bold shadow-sm transition-all flex items-center gap-2 text-[11px] uppercase active:scale-95;
+    }
+
+    /* Advanced Form Input */
+    .form-input-premium {
+        @apply w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-bold shadow-inner py-3.5 transition-all placeholder-gray-300;
+    }
+
+    /* Premium Section Header Card */
+    .card-header-premium {
+        @apply bg-gray-50 px-8 py-6 border-b border-gray-100 flex items-center justify-between;
+    }
+}
+
+/* Global Aesthetics */
+body {
+    @apply bg-gray-50 text-gray-900;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #cbd5e1;
+}

@@ -30,19 +30,19 @@ const greeting = computed(() => {
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
 
                 <!-- Greeting Banner -->
-                <div class="relative bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-                    <div class="absolute inset-0 bg-gradient-to-br from-[#2CA01C]/5 via-transparent to-[#0077C5]/5 pointer-events-none"></div>
+                <div class="relative bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+                    <div class="absolute inset-0 bg-gradient-to-br from-indigo-50/50 via-transparent to-purple-50/50 pointer-events-none"></div>
                     <div class="px-8 py-7 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                         <div>
-                            <p class="text-[#2CA01C] font-semibold text-sm uppercase tracking-widest mb-1">
+                            <p class="text-indigo-600 font-black text-[10px] uppercase tracking-widest mb-1">
                                 {{ greeting }},
                             </p>
-                            <h1 class="text-3xl font-extrabold text-gray-900 leading-tight">{{ $page.props.auth.user.name }}</h1>
-                            <p class="text-gray-500 mt-2 text-sm max-w-lg">Here's a quick overview of your workspace activity. Everything you need is just one click away.</p>
+                            <h1 class="text-3xl font-black text-gray-900 leading-tight tracking-tight">{{ $page.props.auth.user.name }}</h1>
+                            <p class="text-gray-500 mt-2 text-sm max-w-lg font-medium">Welcome back to your central command. Tracking progress across all operations.</p>
                         </div>
                         <div class="flex items-center gap-3 flex-shrink-0">
-                            <span class="text-xs bg-[#2CA01C]/10 text-[#2CA01C] border border-[#2CA01C]/20 px-3 py-1.5 rounded-full font-semibold inline-flex items-center gap-1.5">
-                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg>
+                            <span class="text-[10px] bg-indigo-50 text-indigo-600 border border-indigo-100 px-4 py-2 rounded-xl font-black uppercase tracking-widest inline-flex items-center gap-2 shadow-sm">
+                                <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
                                 {{ $page.props.auth.user.roles[0] || 'User' }}
                             </span>
                         </div>
@@ -54,9 +54,9 @@ const greeting = computed(() => {
                     <h2 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 px-1">Quick Actions</h2>
                     <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
 
-                        <Link v-if="stats.hasOwnProperty('projects')" :href="route('projects.index')" class="group bg-white border border-gray-200 rounded-2xl p-5 flex flex-col items-start gap-3 hover:border-[#0077C5] hover:shadow-md transition-all duration-200">
-                            <div class="w-10 h-10 rounded-xl bg-blue-50 group-hover:bg-[#0077C5]/10 flex items-center justify-center transition-colors">
-                                <svg class="w-5 h-5 text-[#0077C5]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                        <Link v-if="stats.hasOwnProperty('projects')" :href="route('projects.index')" class="group bg-white border border-gray-100 rounded-2xl p-5 flex flex-col items-start gap-3 hover:border-indigo-600 hover:shadow-md transition-all duration-200">
+                            <div class="w-10 h-10 rounded-xl bg-indigo-50 group-hover:bg-indigo-600 font-black text-indigo-600 group-hover:text-white flex items-center justify-center transition-all">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
                             </div>
                             <div>
                                 <p class="text-sm font-bold text-gray-800 group-hover:text-[#0077C5] transition-colors">Projects</p>
@@ -64,9 +64,9 @@ const greeting = computed(() => {
                             </div>
                         </Link>
 
-                        <Link v-if="stats.hasOwnProperty('tasks')" :href="route('tasks.index')" class="group bg-white border border-gray-200 rounded-2xl p-5 flex flex-col items-start gap-3 hover:border-[#2CA01C] hover:shadow-md transition-all duration-200">
-                            <div class="w-10 h-10 rounded-xl bg-green-50 group-hover:bg-[#2CA01C]/10 flex items-center justify-center transition-colors">
-                                <svg class="w-5 h-5 text-[#2CA01C]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+                        <Link v-if="stats.hasOwnProperty('tasks')" :href="route('tasks.index')" class="group bg-white border border-gray-100 rounded-2xl p-5 flex flex-col items-start gap-3 hover:border-indigo-600 hover:shadow-md transition-all duration-200">
+                            <div class="w-10 h-10 rounded-xl bg-indigo-50 group-hover:bg-indigo-600 font-black text-indigo-600 group-hover:text-white flex items-center justify-center transition-all">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138-3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
                             </div>
                             <div>
                                 <p class="text-sm font-bold text-gray-800 group-hover:text-[#2CA01C] transition-colors">Tasks</p>
@@ -112,7 +112,7 @@ const greeting = computed(() => {
 
                 <!-- KPI Stats -->
                 <div>
-                    <h2 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 px-1">Business Overview</h2>
+                    <h2 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-3 px-1">Overview</h2>
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
 
                         <!-- Stat 1: Projects -->
@@ -277,15 +277,15 @@ const greeting = computed(() => {
                         <div class="flex-1 p-6 flex flex-col items-center text-center gap-4">
                             <img class="w-16 h-16 rounded-full border-4 border-white shadow-lg" :src="'https://ui-avatars.com/api/?name='+$page.props.auth.user.name+'&background=2CA01C&color=fff&size=128'" alt="User Avatar" />
                             <div>
-                                <p class="font-bold text-gray-900 text-lg">{{ $page.props.auth.user.name }}</p>
-                                <p class="text-sm text-gray-500">{{ $page.props.auth.user.email }}</p>
-                                <span class="mt-2 inline-block text-xs font-bold px-3 py-1 rounded-full bg-[#2CA01C]/10 text-[#2CA01C] border border-[#2CA01C]/20">
+                                <p class="font-black text-gray-900 text-lg uppercase tracking-tight">{{ $page.props.auth.user.name }}</p>
+                                <p class="text-sm text-gray-500 font-medium">{{ $page.props.auth.user.email }}</p>
+                                <span class="mt-2 inline-block text-[10px] font-black px-4 py-1.5 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 uppercase tracking-widest">
                                     {{ $page.props.auth.user.roles[0] || 'User' }}
                                 </span>
                             </div>
                             <div class="w-full mt-2 space-y-2">
-                                <Link :href="route('profile.edit')" class="w-full flex items-center justify-center gap-2 border-2 border-[#2CA01C] text-[#2CA01C] hover:bg-[#2CA01C] hover:text-white font-bold rounded-xl py-2.5 text-sm transition-colors">
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                                <Link :href="route('profile.edit')" class="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-gray-900 text-white font-black rounded-xl py-3 text-[10px] uppercase tracking-widest transition-all shadow-md active:scale-95">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
                                     Edit Profile
                                 </Link>
                                 <Link v-if="$page.props.auth.user.permissions.includes('manage users') || $page.props.auth.user.roles.includes('Super Admin')" :href="route('users.index')" class="w-full flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl py-2.5 text-sm transition-colors">

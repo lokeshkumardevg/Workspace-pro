@@ -5,10 +5,11 @@ import { ref, computed } from 'vue';
 
 const props = defineProps({
     project: Object,
-    stats: Object
+    stats: Object,
+    tab: String
 });
 
-const activeTab = ref('business'); // business, proposal, report
+const activeTab = ref(props.tab || 'business'); // business, proposal, report
 
 const form = useForm({
     name: props.project.name,

@@ -44,7 +44,7 @@ const markAllAsRead = () => {
             <div class="h-16 flex items-center justify-center border-b border-indigo-800 px-4 bg-indigo-950">
                 <Link :href="route('dashboard')" class="flex items-center gap-3 w-full justify-center">
                     <ApplicationLogo class="block h-8 w-auto fill-current text-white" />
-                    <span class="text-white font-bold text-lg tracking-wide">WorkSpace Pro</span>
+                    <span class="text-white font-bold text-lg tracking-wide">{{ $page.props.system_settings?.app_name || 'WorkSpace Pro' }}</span>
                 </Link>
             </div>
 
@@ -152,6 +152,13 @@ const markAllAsRead = () => {
                             </NavLink>
                         </div>
                     </div>
+
+                    <!-- Global Config -->
+                    <NavLink v-if="$page.props.auth.user.roles.includes('Super Admin')"
+                        :href="route('settings.index')" :active="route().current('settings.*')" class="w-full text-indigo-100 hover:bg-indigo-800 hover:text-white rounded-lg px-3 py-2.5 flex items-center gap-3 transition-colors">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.5 12a7.5 7.5 0 1115 0 7.5 7.5 0 01-15 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3m0 0v3m0-3h3m-3 0H9"/></svg>
+                        System Setup
+                    </NavLink>
 
                 </nav>
             </div>

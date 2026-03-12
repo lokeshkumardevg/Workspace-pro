@@ -29,9 +29,19 @@ class LeadController extends Controller
         $leads = $leadsQuery->paginate(10)->withQueryString();
         $users = User::role(['Employee', 'Admin', 'Super Admin'])->get();
 
+        // Zoho-style Analytics
+        $stats = [
+            'total' => Lead::count(),
+            'new' => Lead::where('status', 'new')->count(),
+            'qualified' => Lead::where('status', 'qualified')->count(),
+            'won' => Lead::where('status', 'won')->count(),
+            'conversion_rate' => Lead::count() > 0 ? round((Lead::where('status', 'won')->count() / Lead::count()) * 100, 1) : 0,
+        ];
+
         return Inertia::render('Leads/Index', [
             'leads' => $leads,
             'users' => $users,
+            'stats' => $stats,
             'filters' => $request->only('search')
         ]);
     }

@@ -13,10 +13,15 @@ class AttendanceController extends Controller
 {
     private $holidayService;
 
-    // Office Location Config: Champ Info Software (Sector 65, Noida)
-    private const OFFICE_LAT = 28.61314773529335;
-    private const OFFICE_LNG = 77.38732458230429;
-    private const RADIUS_METERS = 200;
+    private function getOfficeConfig()
+    {
+        $settings = \App\Models\SystemSetting::all()->pluck('value', 'key');
+        return [
+            'lat' => (float) ($settings['office_lat'] ?? 28.61314773529335),
+            'lng' => (float) ($settings['office_lng'] ?? 77.38732458230429),
+            'radius' => (int) ($settings['office_radius'] ?? 200),
+        ];
+    }
 
     public function __construct(HolidayService $holidayService)
     {
@@ -61,6 +66,8 @@ class AttendanceController extends Controller
             'working_days' => $this->holidayService->getWorkingDaysCount($month, $year)
         ];
 
+        $office = $this->getOfficeConfig();
+
         return Inertia::render('Attendance/Index', [
             'attendances' => $attendances,
             'todayAttendance' => $todayAttendance,
@@ -68,9 +75,9 @@ class AttendanceController extends Controller
             'personalStats' => $personalStats,
             'filters' => $request->only('search'),
             'officeLocation' => [
-                'lat' => self::OFFICE_LAT,
-                'lng' => self::OFFICE_LNG,
-                'radius' => self::RADIUS_METERS
+                'lat' => $office['lat'],
+                'lng' => $office['lng'],
+                'radius' => $office['radius']
             ]
         ]);
     }
@@ -86,9 +93,10 @@ class AttendanceController extends Controller
             return redirect()->back()->with('error', '❌ Location access is required for attendance.');
         }
 
-        $distance = $this->calculateDistance($lat, $lng, self::OFFICE_LAT, self::OFFICE_LNG);
+        $office = $this->getOfficeConfig();
+        $distance = $this->calculateDistance($lat, $lng, $office['lat'], $office['lng']);
 
-        if ($distance > self::RADIUS_METERS) {
+        if ($distance > $office['radius']) {
             return redirect()->back()->with('error', sprintf('❌ Outside Office Boundary. You are %.2f meters away.', $distance));
         }
 
@@ -133,9 +141,10 @@ class AttendanceController extends Controller
             return redirect()->back()->with('error', '❌ Location access is required to clock out.');
         }
 
-        $distance = $this->calculateDistance($lat, $lng, self::OFFICE_LAT, self::OFFICE_LNG);
+        $office = $this->getOfficeConfig();
+        $distance = $this->calculateDistance($lat, $lng, $office['lat'], $office['lng']);
 
-        if ($distance > self::RADIUS_METERS) {
+        if ($distance > $office['radius']) {
             return redirect()->back()->with('error', sprintf('❌ Outside Office Boundary. You are %.2f meters away.', $distance));
         }
 
