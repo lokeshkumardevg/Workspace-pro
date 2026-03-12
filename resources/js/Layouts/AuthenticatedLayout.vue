@@ -18,7 +18,14 @@ showingUserManagement.value = isUserRoute();
 showingAttendance.value = isAttendanceRoute();
 
 const markAsRead = (notif) => {
-    router.post(route('notifications.read', notif.id), {}, { preserveScroll: true });
+    router.post(route('notifications.read', notif.id), {}, { 
+        preserveScroll: true,
+        onSuccess: () => {
+            if (notif.data.action_url) {
+                router.visit(notif.data.action_url);
+            }
+        }
+    });
 };
 
 const markAllAsRead = () => {

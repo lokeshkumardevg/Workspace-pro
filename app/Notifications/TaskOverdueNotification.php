@@ -7,7 +7,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class TaskAssignedNotification extends Notification
+class TaskOverdueNotification extends Notification
 {
     use Queueable;
 
@@ -26,23 +26,24 @@ class TaskAssignedNotification extends Notification
     public function toMail($notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('New Task Assigned: ' . $this->task->title)
+            ->subject('⚠️ Task Overdue: ' . $this->task->title)
             ->greeting('Hello ' . $notifiable->name . ',')
-            ->line('A new task has been assigned to you.')
+            ->error()
+            ->line('One of your assigned tasks has passed its deadline and is still not completed.')
             ->line('**Task:** ' . $this->task->title)
             ->line('**Project:** ' . ($this->task->project->name ?? 'N/A'))
-            ->line('**Due Date:** ' . ($this->task->due_date ?? 'No deadline'))
-            ->action('View Task', url('/tasks'))
-            ->line('Please complete the task on time. Good luck!');
+            ->line('**Original Deadline:** ' . ($this->task->due_date ?? 'N/A'))
+            ->action('Complete Task Now', url('/tasks'))
+            ->line('Please prioritize this task to avoid further delays.');
     }
 
     public function toArray($notifiable): array
     {
         return [
             'task_id' => $this->task->id,
-            'title' => 'New Task: ' . $this->task->title,
-            'message' => 'You have been assigned to ' . $this->task->title,
-            'type' => 'task_assigned',
+            'title' => '🚨 Task Overdue!',
+            'message' => 'The task "' . $this->task->title . '" is past its deadline.',
+            'type' => 'task_overdue',
             'action_url' => '/tasks'
         ];
     }

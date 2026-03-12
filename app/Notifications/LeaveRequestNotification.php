@@ -44,7 +44,8 @@ class LeaveRequestNotification extends Notification
             'title' => 'Leave Request: ' . $this->leaveRequest->user->name,
             'user_name' => $this->leaveRequest->user->name,
             'message' => $this->leaveRequest->user->name . ' is requesting ' . $this->leaveRequest->days . ' days off.',
-            'type' => 'leave_request'
+            'type' => 'leave_request',
+            'action_url' => '/leaves'
         ];
     }
 }
