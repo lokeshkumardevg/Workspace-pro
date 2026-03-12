@@ -20,6 +20,11 @@ const showCreateModal = ref(false);
 
 const form = useForm({
     name: '',
+    client_name: '',
+    budget: '',
+    technology_stack: '',
+    estimated_hours: '',
+    team_size: '',
     description: '',
     start_date: '',
     end_date: '',
@@ -76,7 +81,7 @@ const createProject = () => {
                                     <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Project Name</th>
                                     <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Timeline</th>
                                     <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                                    <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Created By</th>
+                                    <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">Actions / Business</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-100">
@@ -98,9 +103,19 @@ const createProject = () => {
                                             {{ project.status }}
                                         </span>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 flex items-center gap-2">
-                                        <img class="h-6 w-6 rounded-full" :src="'https://ui-avatars.com/api/?name='+project.creator.name+'&background=random'" alt="Avatar">
-                                        {{ project.creator.name }}
+                                    <td class="px-6 py-4 text-center">
+                                        <div class="flex items-center justify-center gap-2">
+                                            <div class="flex items-center gap-2 text-sm text-gray-500 mr-4">
+                                                <img class="h-6 w-6 rounded-full" :src="'https://ui-avatars.com/api/?name='+project.creator.name+'&background=random'" alt="Avatar">
+                                                {{ project.creator.name }}
+                                            </div>
+                                            <Link v-if="$page.props.auth.user.roles.includes('Super Admin')" 
+                                                  :href="route('projects.show', project.id)" 
+                                                  class="bg-indigo-50 text-indigo-700 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-indigo-600 hover:text-white transition-all shadow-sm flex items-center gap-2">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                                                Business Insights
+                                            </Link>
+                                        </div>
                                     </td>
                                 </tr>
                                 <tr v-if="projects.data.length === 0">
@@ -142,6 +157,24 @@ const createProject = () => {
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
                                         <input v-model="form.end_date" type="date" class="w-full border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-sm" />
+                                    </div>
+                                </div>
+
+                                <div class="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 space-y-4" v-if="$page.props.auth.user.roles.includes('Super Admin')">
+                                    <h4 class="text-[10px] font-black text-indigo-700 uppercase tracking-widest">🛡️ Super Admin: Business Setup</h4>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Client Name</label>
+                                            <input v-model="form.client_name" type="text" class="w-full border-gray-300 rounded-lg text-sm" placeholder="Client Co." />
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Budget ($)</label>
+                                            <input v-model="form.budget" type="number" class="w-full border-gray-300 rounded-lg text-sm" placeholder="5000" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Tech Stack</label>
+                                        <input v-model="form.technology_stack" type="text" class="w-full border-gray-300 rounded-lg text-sm" placeholder="PHP, React, MySQL" />
                                     </div>
                                 </div>
                             </div>

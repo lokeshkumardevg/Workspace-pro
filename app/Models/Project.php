@@ -11,10 +11,16 @@ class Project extends Model
 
     protected $fillable = [
         'name',
+        'client_name',
         'description',
+        'budget',
+        'technology_stack',
+        'estimated_hours',
+        'team_size',
         'start_date',
         'end_date',
         'status',
+        'proposal_content',
         'created_by'
     ];
 
