@@ -76,6 +76,7 @@ class ProjectController extends Controller
             'estimated_hours' => 'nullable|integer',
             'team_size' => 'nullable|integer',
             'proposal_content' => 'nullable|string',
+            'handover_notes' => 'nullable|string',
             'status' => 'required|in:pending,in_progress,completed',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date',
@@ -99,13 +100,17 @@ class ProjectController extends Controller
         // Assuming budget is total, we could track expenses later, but for now show health
         $healthStatus = $progress >= 50 ? 'Healthy' : 'Behind Schedule';
 
+        // Get unique team members who have tasks in this project
+        $team = $project->tasks->map(fn($t) => $t->assignee)->filter()->unique('id')->values();
+
         return Inertia::render('Projects/Show', [
             'project' => $project,
             'stats' => [
                 'total_tasks' => $totalTasks,
                 'completed_tasks' => $completedTasks,
                 'progress' => $progress,
-                'health' => $healthStatus
+                'health' => $healthStatus,
+                'team' => $team
             ]
         ]);
     }

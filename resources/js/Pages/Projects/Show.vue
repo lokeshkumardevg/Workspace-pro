@@ -19,6 +19,7 @@ const form = useForm({
     team_size: props.project.team_size,
     description: props.project.description || '',
     proposal_content: props.project.proposal_content || '',
+    handover_notes: props.project.handover_notes || '',
     status: props.project.status,
     start_date: props.project.start_date,
     end_date: props.project.end_date,
@@ -116,6 +117,10 @@ const isSuperAdmin = computed(() => usePage().props.auth.user.roles.includes('Su
                                             <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Core Team Size</label>
                                             <input v-model="form.team_size" type="number" class="w-full bg-gray-50 border-gray-100 rounded-xl focus:ring-indigo-600 focus:border-indigo-600 text-sm font-bold shadow-inner" />
                                         </div>
+                                    </div>
+                                    <div class="mt-6">
+                                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Handover / Documentation Notes (Internal)</label>
+                                        <textarea v-model="form.handover_notes" rows="6" class="w-full bg-gray-50 border-gray-100 rounded-xl focus:ring-indigo-600 focus:border-indigo-600 text-sm font-bold shadow-inner" placeholder="Write technical handover instructions, database logic, or process flow for anyone joining this project later..."></textarea>
                                     </div>
                                 </div>
                                 <div class="space-y-6 bg-gray-50 p-8 rounded-[2rem] border border-gray-100">
@@ -254,16 +259,35 @@ const isSuperAdmin = computed(() => usePage().props.auth.user.roles.includes('Su
                                     </div>
                                 </div>
                                 <div>
+                                    <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Live Team Assembly</h4>
+                                    <div class="flex flex-wrap gap-4 mb-8">
+                                        <div v-for="member in stats.team" :key="member.id" class="flex items-center gap-3 bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
+                                            <img class="h-8 w-8 rounded-full border-2 border-indigo-50" :src="'https://ui-avatars.com/api/?name='+member.name+'&background=random'" alt="Member">
+                                            <div class="flex flex-col">
+                                                <span class="text-[9px] font-black text-gray-900 uppercase tracking-tight">{{ member.name }}</span>
+                                                <span class="text-[8px] font-bold text-gray-400 uppercase">Contributor</span>
+                                            </div>
+                                        </div>
+                                        <div v-if="stats.team.length === 0" class="text-[10px] font-black text-gray-300 uppercase italic">No team members assigned yet.</div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Handover Instructions</h4>
+                                    <div class="bg-gray-900 text-indigo-100 p-8 rounded-3xl font-mono text-xs leading-relaxed whitespace-pre-wrap border-4 border-gray-800 shadow-inner">
+                                        {{ project.handover_notes || "// No handover notes provided by the Super Admin yet." }}
+                                    </div>
+                                </div>
+                                <div class="mt-8 pt-8 border-t border-gray-100">
                                     <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Current Roadmap</h4>
                                     <div class="space-y-4">
-                                        <div v-for="task in project.tasks.slice(0, 5)" :key="task.id" class="flex items-center gap-4 p-4 rounded-2xl bg-gray-50/50 border border-gray-50">
+                                        <div v-for="task in project.tasks.slice(0, 5)" :key="task.id" class="flex items-center gap-4 p-4 rounded-2xl bg-gray-50/50 border border-gray-50 font-medium">
                                             <div class="h-8 w-8 rounded-full flex items-center justify-center text-[10px] font-black" 
                                                  :class="task.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'">
                                                 {{ task.status === 'completed' ? '✓' : '...' }}
                                             </div>
                                             <div>
                                                 <p class="text-xs font-black text-gray-900 uppercase tracking-tight">{{ task.title }}</p>
-                                                <p class="text-[9px] text-gray-400 font-bold">Assigned to: {{ task.assignee?.name || 'N/A' }}</p>
+                                                <p class="text-[9px] text-gray-400 font-bold uppercase">Assigned to: {{ task.assignee?.name || 'N/A' }}</p>
                                             </div>
                                         </div>
                                     </div>

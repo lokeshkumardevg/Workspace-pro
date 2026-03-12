@@ -21,6 +21,7 @@ class Project extends Model
         'end_date',
         'status',
         'proposal_content',
+        'handover_notes',
         'created_by'
     ];
 
