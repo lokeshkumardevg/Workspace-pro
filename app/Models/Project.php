@@ -22,6 +22,13 @@ class Project extends Model
         'status',
         'proposal_content',
         'handover_notes',
+        'target_audience',
+        'security_measures',
+        'project_scope',
+        'milestones_content',
+        'deliverables',
+        'maintenance_support',
+        'terms_conditions',
         'created_by'
     ];
 

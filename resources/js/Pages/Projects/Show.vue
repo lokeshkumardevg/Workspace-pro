@@ -20,6 +20,13 @@ const form = useForm({
     description: props.project.description || '',
     proposal_content: props.project.proposal_content || '',
     handover_notes: props.project.handover_notes || '',
+    target_audience: props.project.target_audience || '',
+    security_measures: props.project.security_measures || '',
+    project_scope: props.project.project_scope || '',
+    milestones_content: props.project.milestones_content || '',
+    deliverables: props.project.deliverables || '',
+    maintenance_support: props.project.maintenance_support || '',
+    terms_conditions: props.project.terms_conditions || '',
     status: props.project.status,
     start_date: props.project.start_date,
     end_date: props.project.end_date,
@@ -119,27 +126,74 @@ const isSuperAdmin = computed(() => usePage().props.auth.user.roles.includes('Su
                                         </div>
                                     </div>
                                     <div class="mt-6">
-                                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Handover / Documentation Notes (Internal)</label>
-                                        <textarea v-model="form.handover_notes" rows="6" class="w-full bg-gray-50 border-gray-100 rounded-xl focus:ring-indigo-600 focus:border-indigo-600 text-sm font-bold shadow-inner" placeholder="Write technical handover instructions, database logic, or process flow for anyone joining this project later..."></textarea>
+                                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Handover Instructions (Internal)</label>
+                                        <textarea v-model="form.handover_notes" rows="4" class="w-full bg-gray-50 border-gray-100 rounded-xl focus:ring-indigo-600 focus:border-indigo-600 text-sm font-bold shadow-inner" placeholder="Tech notes for developers..."></textarea>
+                                    </div>
+
+                                    <!-- NEW: Proposal Advanced Sections -->
+                                    <div class="mt-12 space-y-8 p-8 bg-gray-50 rounded-[2.5rem] border border-gray-100">
+                                        <h3 class="text-sm font-black text-indigo-700 uppercase tracking-widest border-b border-indigo-100 pb-4">📝 Advanced Proposal Content (Page 2-4)</h3>
+                                        
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div>
+                                                <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Target Audience</label>
+                                                <textarea v-model="form.target_audience" rows="3" class="w-full bg-white border-gray-100 rounded-xl text-xs font-bold shadow-sm" placeholder="Define end-users..."></textarea>
+                                            </div>
+                                            <div>
+                                                <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Project Scope</label>
+                                                <textarea v-model="form.project_scope" rows="3" class="w-full bg-white border-gray-100 rounded-xl text-xs font-bold shadow-sm" placeholder="Boundaries of work..."></textarea>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">🛡️ Security & Scalability Protocols</label>
+                                            <textarea v-model="form.security_measures" rows="3" class="w-full bg-white border-gray-100 rounded-xl text-xs font-bold shadow-sm" placeholder="SSL, OAuth2, Encryption details..."></textarea>
+                                        </div>
+
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div>
+                                                <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Milestones & Phases</label>
+                                                <textarea v-model="form.milestones_content" rows="3" class="w-full bg-white border-gray-100 rounded-xl text-xs font-bold shadow-sm" placeholder="Phase 1: Design..."></textarea>
+                                            </div>
+                                            <div>
+                                                <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Maintenance & Support</label>
+                                                <textarea v-model="form.maintenance_support" rows="3" class="w-full bg-white border-gray-100 rounded-xl text-xs font-bold shadow-sm" placeholder="Post-launch support period..."></textarea>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">⚖️ Terms & Conditions</label>
+                                            <textarea v-model="form.terms_conditions" rows="3" class="w-full bg-white border-gray-100 rounded-xl text-xs font-bold shadow-sm" placeholder="Payment terms, legal clauses..."></textarea>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="space-y-6 bg-gray-50 p-8 rounded-[2rem] border border-gray-100">
-                                    <h4 class="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-4">Project Health Index</h4>
-                                    <div class="text-center py-6">
-                                        <div class="inline-flex items-center justify-center w-32 h-32 rounded-full border-8 border-white shadow-xl bg-white relative overflow-hidden">
-                                            <div class="absolute inset-0 bg-indigo-600/10" :style="{ height: stats.progress + '%' }"></div>
-                                            <span class="text-3xl font-black text-indigo-700 relative z-10">{{ stats.progress }}%</span>
+                                
+                                <div class="space-y-6">
+                                    <div class="bg-gray-50 p-8 rounded-[2rem] border border-gray-100">
+                                        <h4 class="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-4">Project Health Index</h4>
+                                        <div class="text-center py-6">
+                                            <div class="inline-flex items-center justify-center w-32 h-32 rounded-full border-8 border-white shadow-xl bg-white relative overflow-hidden">
+                                                <div class="absolute inset-0 bg-indigo-600/10" :style="{ height: stats.progress + '%' }"></div>
+                                                <span class="text-3xl font-black text-indigo-700 relative z-10">{{ stats.progress }}%</span>
+                                            </div>
+                                            <p class="mt-4 text-xs font-black uppercase text-gray-600">{{ stats.health }}</p>
                                         </div>
-                                        <p class="mt-4 text-xs font-black uppercase text-gray-600">{{ stats.health }}</p>
+                                        <div class="space-y-4">
+                                            <div class="flex justify-between text-[10px] font-bold uppercase tracking-wide text-gray-400">
+                                                <span>Completed Tasks</span>
+                                                <span class="text-gray-900">{{ stats.completed_tasks }} / {{ stats.total_tasks }}</span>
+                                            </div>
+                                            <div class="w-full bg-gray-200 h-1.5 rounded-full overflow-hidden">
+                                                <div class="bg-indigo-600 h-full transition-all" :style="{ width: stats.progress + '%' }"></div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="space-y-4">
-                                        <div class="flex justify-between text-[10px] font-bold uppercase tracking-wide text-gray-400">
-                                            <span>Completed Tasks</span>
-                                            <span class="text-gray-900">{{ stats.completed_tasks }} / {{ stats.total_tasks }}</span>
-                                        </div>
-                                        <div class="w-full bg-gray-200 h-1.5 rounded-full overflow-hidden">
-                                            <div class="bg-indigo-600 h-full transition-all" :style="{ width: stats.progress + '%' }"></div>
-                                        </div>
+
+                                    <div class="p-8 bg-indigo-900 rounded-[2rem] shadow-xl text-white">
+                                        <h4 class="text-[10px] font-black uppercase tracking-widest mb-4 opacity-60 italic">AI Professional Suggestion</h4>
+                                        <p class="text-[11px] leading-relaxed font-medium opacity-90">
+                                            "Based on current tech stack ({{ project.technology_stack }}), we recommend emphasizing **End-to-End Encryption** and **Automated CI/CD** in the security section of the proposal."
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -152,73 +206,208 @@ const isSuperAdmin = computed(() => usePage().props.auth.user.roles.includes('Su
                     </form>
                 </div>
 
-                <!-- Proposal Tab (Client View) -->
-                <div v-if="activeTab === 'proposal'" class="bg-white rounded-[2.5rem] shadow-2xl p-16 print:p-0 print:shadow-none border border-gray-100">
-                    <div class="flex justify-between items-start mb-16 border-b border-gray-100 pb-16">
+                <!-- Proposal Tab (Multi-Page Professional View) -->
+                <div v-if="activeTab === 'proposal'" class="proposal-document">
+                    
+                    <!-- PAGE 1: COVER PAGE -->
+                    <div class="page bg-white p-20 shadow-2xl rounded-[3rem] mb-10 flex flex-col justify-between min-h-[1000px] border-l-[16px] border-indigo-600 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-96 h-96 bg-indigo-50 rounded-full blur-[100px] -mr-48 -mt-48 opacity-50"></div>
+                        
                         <div>
-                            <h1 class="text-5xl font-black text-gray-900 uppercase tracking-tighter mb-4">Project Proposal</h1>
-                            <p class="text-indigo-600 font-black uppercase tracking-widest text-sm">Prepared for: {{ project.client_name || 'Valued Client' }}</p>
+                            <div class="bg-indigo-600 w-24 h-24 rounded-3xl mb-12 flex items-center justify-center shadow-xl rotate-3">
+                                <svg class="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                            </div>
+                            <h1 class="text-6xl font-black text-gray-900 uppercase tracking-tighter leading-none mb-4">Enterprise<br/>Strategic<br/>Proposal</h1>
+                            <div class="h-2 w-32 bg-indigo-600 mb-8 rounded-full"></div>
+                            <p class="text-2xl font-bold text-indigo-700 uppercase tracking-widest mb-2">{{ project.name }}</p>
+                            <p class="text-sm font-black text-gray-400 uppercase tracking-[0.3em]">Corporate Digital Initiative</p>
                         </div>
-                        <div class="text-right">
-                            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Proposal Date</p>
-                            <p class="text-lg font-black text-gray-900">{{ formatDate(new Date()) }}</p>
+
+                        <div class="border-t border-gray-100 pt-16 grid grid-cols-2 gap-20">
+                            <div>
+                                <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Client Representative</h4>
+                                <p class="text-xl font-black text-gray-900 uppercase tracking-tight">{{ project.client_name || 'Valued Enterprise Client' }}</p>
+                                <p class="text-xs font-bold text-gray-500 mt-1">Strategic Partner</p>
+                            </div>
+                            <div>
+                                <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Proposal Issued By</h4>
+                                <p class="text-xl font-black text-gray-900 uppercase tracking-tight">Project Dashboard v2</p>
+                                <p class="text-xs font-bold text-gray-500 mt-1">Intelligence System • {{ formatDate(new Date()) }}</p>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-16 mb-16">
-                        <div class="md:col-span-2 space-y-10">
-                            <section>
-                                <h3 class="text-lg font-black text-gray-900 uppercase tracking-tight mb-4 flex items-center gap-2">
-                                    <svg class="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                    Project Overview
-                                </h3>
-                                <p class="text-gray-600 leading-relaxed font-medium">{{ project.description || 'No description provided.' }}</p>
+                    <!-- PAGE 2: EXECUTIVE SUMMARY & TECHNICAL -->
+                    <div class="page bg-white p-20 shadow-2xl rounded-[3rem] mb-10 min-h-[1000px] border border-gray-100">
+                        <div class="flex items-center gap-4 mb-16 opacity-30">
+                            <span class="text-[10px] font-black uppercase tracking-widest">Page 02</span>
+                            <div class="h-px flex-1 bg-gray-200"></div>
+                            <span class="text-[10px] font-black uppercase tracking-widest">Confidential Initiative</span>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-20">
+                            <section class="space-y-12">
+                                <div>
+                                    <h3 class="text-xs font-black text-indigo-700 uppercase tracking-[0.3em] mb-6">01. Executive Overview</h3>
+                                    <p class="text-base font-medium text-gray-600 leading-relaxed text-justify">
+                                        {{ project.description || 'This strategic initiative focuses on delivering a high-performance digital solution tailored to the specific needs of our client partners. Through agile methodology and cutting-edge technical architecture, we ensure maximum ROI and market impact.' }}
+                                    </p>
+                                </div>
+                                <div>
+                                    <h3 class="text-xs font-black text-indigo-700 uppercase tracking-[0.3em] mb-6">02. Market Alignment</h3>
+                                    <p class="text-sm font-bold text-gray-900 mb-4 uppercase tracking-tight">Defining the Target Audience</p>
+                                    <p class="text-sm font-medium text-gray-500 leading-relaxed italic">
+                                        {{ project.target_audience || 'The primary stakeholders include decision-makers and end-users who require an intuitive, reliable, and scalable interface to manage complex data operations seamlessly.' }}
+                                    </p>
+                                </div>
                             </section>
 
-                            <section>
-                                <h3 class="text-lg font-black text-gray-900 uppercase tracking-tight mb-4 flex items-center gap-2">
-                                    <svg class="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.691.34a2 2 0 01-1.783 0l-.691-.34a6 6 0 00-3.86-.517l-2.387.477a2 2 0 00-1.022.547l-.547 1.022a2 2 0 00.547 2.428l.974.974a2 2 0 002.428.547l1.022-.547a2 2 0 00.547-1.022V12"></path></svg>
-                                    Technical Architecture
-                                </h3>
-                                <div class="bg-indigo-50/50 p-6 rounded-2xl border border-indigo-100">
-                                    <p class="text-indigo-800 font-bold whitespace-pre-wrap">{{ project.technology_stack || 'Technology stack not defined yet.' }}</p>
+                            <section class="bg-indigo-50/50 p-12 rounded-[3.5rem] border border-indigo-100/50">
+                                <h3 class="text-xs font-black text-indigo-700 uppercase tracking-[0.3em] mb-10">03. Technical Infrastructure</h3>
+                                <div class="space-y-8">
+                                    <div class="flex items-start gap-4">
+                                        <div class="w-8 h-8 rounded-xl bg-white flex items-center justify-center shadow-sm flex-shrink-0 text-indigo-600 font-black text-xs">#</div>
+                                        <div>
+                                            <p class="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Stack Composition</p>
+                                            <p class="text-xs font-bold text-gray-800 leading-relaxed">{{ project.technology_stack || 'Standard Enterprise Stack (PHP, SQL, React)' }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-start gap-4 pt-6 border-t border-indigo-100/50">
+                                        <div class="w-8 h-8 rounded-xl bg-white flex items-center justify-center shadow-sm flex-shrink-0 text-indigo-600 font-black text-xs">S</div>
+                                        <div>
+                                            <p class="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Architecture Scope</p>
+                                            <p class="text-xs font-medium text-gray-600 leading-relaxed">{{ project.project_scope || 'Developing a robust backend with mobile-responsive frontend capabilities, integrated via secure RESTful APIs.' }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-20 p-6 bg-white rounded-3xl border border-indigo-100 shadow-sm text-center">
+                                    <p class="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-2">Technical Feasibility</p>
+                                    <p class="text-xs font-black text-gray-900 uppercase">Validated & Verified</p>
                                 </div>
                             </section>
                         </div>
+                    </div>
 
-                        <div class="space-y-8">
-                            <div class="bg-gray-900 text-white p-8 rounded-[2rem] shadow-xl">
-                                <h4 class="text-[10px] font-black uppercase tracking-widest mb-6 opacity-60">Investment Summary</h4>
-                                <div class="space-y-4">
-                                    <div class="flex justify-between items-end border-b border-white/10 pb-4">
-                                        <span class="text-[10px] font-black uppercase">Fixed Budget</span>
-                                        <span class="text-xl font-black tracking-tighter">${{ project.budget?.toLocaleString() }}</span>
+                    <!-- PAGE 3: SECURITY & MILESTONES -->
+                    <div class="page bg-gray-900 p-20 shadow-2xl rounded-[3rem] mb-10 min-h-[1000px] text-white relative overflow-hidden">
+                        <div class="absolute bottom-0 left-0 w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px] -ml-64 -mb-64"></div>
+                        
+                        <div class="flex items-center gap-4 mb-20 opacity-30">
+                            <span class="text-[10px] font-black uppercase tracking-widest">Page 03</span>
+                            <div class="h-px flex-1 bg-white/10"></div>
+                            <span class="text-[10px] font-black uppercase tracking-widest text-indigo-400">Security Standard v4.2</span>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-20">
+                            <section>
+                                <h3 class="text-xs font-black text-indigo-400 uppercase tracking-[0.3em] mb-8">04. Iron-Clad Security</h3>
+                                <div class="space-y-6">
+                                    <div class="p-8 bg-white/5 rounded-[2.5rem] border border-white/10 backdrop-blur-sm">
+                                        <p class="text-[9px] font-black text-indigo-300 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> Implementation Protocol
+                                        </p>
+                                        <p class="text-xs font-medium leading-relaxed opacity-80">
+                                            {{ project.security_measures || 'We implement multi-layered security including AES-256 data encryption at rest, TLS 1.3 for data in transit, and role-based access control (RBAC) to ensure absolute data integrity.' }}
+                                        </p>
                                     </div>
-                                    <div class="flex justify-between items-end border-b border-white/10 pb-4">
-                                        <span class="text-[10px] font-black uppercase">Est. Timeline</span>
-                                        <span class="text-sm font-black">{{ project.estimated_hours }} Hours</span>
+                                    <ul class="space-y-3 pl-4">
+                                        <li class="flex items-center gap-3 text-[10px] font-bold opacity-60"><span class="w-1 h-1 bg-indigo-500 rounded-full"></span> OWASP Top 10 Compliance</li>
+                                        <li class="flex items-center gap-3 text-[10px] font-bold opacity-60"><span class="w-1 h-1 bg-indigo-500 rounded-full"></span> Regular Automated Vulnerability Scanning</li>
+                                        <li class="flex items-center gap-3 text-[10px] font-bold opacity-60"><span class="w-1 h-1 bg-indigo-500 rounded-full"></span> Secure Socket Layer (SSL/TLS) Integration</li>
+                                    </ul>
+                                </div>
+                            </section>
+
+                            <section>
+                                <h3 class="text-xs font-black text-indigo-400 uppercase tracking-[0.3em] mb-8">05. Strategic Milestones</h3>
+                                <div class="space-y-8 relative">
+                                    <div class="absolute left-[3px] top-4 bottom-4 w-px bg-indigo-500/30"></div>
+                                    
+                                    <!-- Dynamic Milestones based on input or default -->
+                                    <template v-if="project.milestones_content">
+                                        <div class="relative pl-8 mb-8" v-for="(m, i) in project.milestones_content.split('\n')" :key="i">
+                                            <div class="absolute left-0 top-1 w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,1)]"></div>
+                                            <p class="text-xs font-black uppercase tracking-tight">{{ m }}</p>
+                                        </div>
+                                    </template>
+                                    <template v-else>
+                                        <div class="relative pl-8">
+                                            <div class="absolute left-0 top-1 w-2 h-2 rounded-full bg-indigo-500"></div>
+                                            <p class="text-[10px] font-black text-indigo-300 uppercase tracking-widest mb-1">Phase I • Strategic Discovery</p>
+                                            <p class="text-xs font-medium opacity-60">Requirement gathering and analysis.</p>
+                                        </div>
+                                        <div class="relative pl-8">
+                                            <div class="absolute left-0 top-1 w-2 h-2 rounded-full bg-indigo-500"></div>
+                                            <p class="text-[10px] font-black text-indigo-300 uppercase tracking-widest mb-1">Phase II • Engineering & Dev</p>
+                                            <p class="text-xs font-medium opacity-60">High-fidelity coding and internal testing.</p>
+                                        </div>
+                                        <div class="relative pl-8">
+                                            <div class="absolute left-0 top-1 w-2 h-2 rounded-full bg-indigo-500"></div>
+                                            <p class="text-[10px] font-black text-indigo-300 uppercase tracking-widest mb-1">Phase III • Deployment & QA</p>
+                                            <p class="text-xs font-medium opacity-60">Production release and maintenance cycle.</p>
+                                        </div>
+                                    </template>
+                                </div>
+                            </section>
+                        </div>
+                    </div>
+
+                    <!-- PAGE 4: COMMERCIALS & TERMS -->
+                    <div class="page bg-white p-20 shadow-2xl rounded-[3rem] min-h-[1000px] border border-gray-100 flex flex-col justify-between">
+                         <div>
+                            <div class="flex items-center gap-4 mb-20 opacity-30">
+                                <span class="text-[10px] font-black uppercase tracking-widest">Page 04</span>
+                                <div class="h-px flex-1 bg-gray-200"></div>
+                                <span class="text-[10px] font-black uppercase tracking-widest">Financial Framework</span>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-20">
+                                <div>
+                                    <h3 class="text-xs font-black text-indigo-700 uppercase tracking-[0.3em] mb-10">06. Resource Utilization</h3>
+                                    <div class="bg-gray-50 p-10 rounded-[2.5rem] border border-gray-100">
+                                        <div class="space-y-6">
+                                            <div class="flex justify-between items-center pb-6 border-b border-gray-200">
+                                                <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Team Deployment</span>
+                                                <span class="text-sm font-black text-gray-900">{{ project.team_size || 'N/A' }} Resources</span>
+                                            </div>
+                                            <div class="flex justify-between items-center pb-6 border-b border-gray-200">
+                                                <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Hourly Est.</span>
+                                                <span class="text-sm font-black text-gray-900">{{ project.estimated_hours || 'N/A' }} Hours</span>
+                                            </div>
+                                            <div class="flex justify-between items-center">
+                                                <span class="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Proposed Investment</span>
+                                                <span class="text-2xl font-black text-gray-900 tracking-tighter">${{ project.budget?.toLocaleString() || '0.00' }}</span>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="flex justify-between items-end">
-                                        <span class="text-[10px] font-black uppercase">Supervision</span>
-                                        <span class="text-sm font-black">{{ project.team_size }} Members</span>
+                                    <div class="mt-10">
+                                        <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Post-Launch Support</h4>
+                                        <p class="text-xs font-medium text-gray-500 leading-relaxed italic border-l-4 border-indigo-100 pl-4">
+                                            {{ project.maintenance_support || 'Standard 3-month complimentary support period for bug fixes and system optimization.' }}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h3 class="text-xs font-black text-indigo-700 uppercase tracking-[0.3em] mb-10">07. Legal Framework</h3>
+                                    <div class="prose prose-sm text-gray-500 leading-relaxed text-[11px] space-y-4">
+                                        <p class="font-black text-gray-800 uppercase text-[9px] tracking-widest">Terms & Conditions</p>
+                                        <p class="text-justify font-medium">
+                                            {{ project.terms_conditions || 'All intellectual property rights remain with the client upon final payment. Payments shall be made in installments tied to project milestones. This proposal is valid for 30 days from the date of issue.' }}
+                                        </p>
+                                    </div>
+                                    <div class="mt-20 pt-10 border-t border-gray-100 flex items-center justify-between">
+                                        <div class="w-24 h-px bg-gray-200"></div>
+                                        <span class="text-[9px] font-black text-gray-300 uppercase tracking-[0.4em]">Official Stamp Here</span>
+                                        <div class="w-24 h-px bg-gray-200"></div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="p-8 border-2 border-dashed border-gray-200 rounded-[2rem]">
-                                <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Milestones</h4>
-                                <ul class="space-y-4">
-                                    <li class="flex items-center gap-3 text-xs font-bold text-gray-600">
-                                        <span class="h-1.5 w-1.5 rounded-full bg-indigo-500"></span> Phase 1: Planning
-                                    </li>
-                                    <li class="flex items-center gap-3 text-xs font-bold text-gray-600">
-                                        <span class="h-1.5 w-1.5 rounded-full bg-indigo-500"></span> Phase 2: Design
-                                    </li>
-                                    <li class="flex items-center gap-3 text-xs font-bold text-gray-600">
-                                        <span class="h-1.5 w-1.5 rounded-full bg-indigo-500"></span> Phase 3: Launch
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
+                         </div>
+
+                         <div class="text-center opacity-20">
+                             <p class="text-[9px] font-black text-gray-400 uppercase tracking-[0.5em]">End of Strategic Proposal</p>
+                         </div>
                     </div>
                 </div>
 
@@ -330,9 +519,20 @@ const isSuperAdmin = computed(() => usePage().props.auth.user.roles.includes('Su
 <style>
 @media print {
     .no-print { display: none !important; }
-    .print-only { display: block !important; }
+    .page { 
+        margin-bottom: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+        page-break-after: always !important;
+        min-height: 100vh !important;
+        padding: 40px !important;
+    }
+    .page.bg-gray-900 {
+        background-color: #111827 !important;
+        -webkit-print-color-adjust: exact;
+    }
     body { background: white !important; }
     .max-w-7xl { max-width: 100% !important; margin: 0 !important; }
-    .p-16 { padding: 0 !important; }
+    .p-20 { padding: 40px !important; }
 }
 </style>
