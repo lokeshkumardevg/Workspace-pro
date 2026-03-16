@@ -34,15 +34,22 @@ const getPosition = () => {
     });
 };
 
-onMounted(async () => {
+const fetchCurrentPosition = async () => {
     try {
+        isLocating.value = true;
         const pos = await getPosition();
         const el = document.getElementById('current-coords');
         if (el) el.innerText = `Current: ${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}`;
+        isLocating.value = false;
     } catch (e) {
+        isLocating.value = false;
         const el = document.getElementById('current-coords');
         if (el) el.innerText = 'Location access blocked';
     }
+};
+
+onMounted(() => {
+    fetchCurrentPosition();
 });
 
 const clockIn = async () => {
@@ -107,6 +114,9 @@ const clockOut = async () => {
                     <div class="text-[10px] font-black text-gray-400 uppercase text-right leading-tight">
                         HQ: {{ officeLocation.lat }}, {{ officeLocation.lng }}
                         <div id="current-coords" class="text-indigo-500 mt-1 lowercase">detecting your location...</div>
+                        <button v-if="!isLocating" @click="fetchCurrentPosition" class="mt-1 text-indigo-400 hover:text-indigo-600 underline text-[9px] font-black uppercase tracking-widest">
+                            Retry Location
+                        </button>
                     </div>
                 </div>
 

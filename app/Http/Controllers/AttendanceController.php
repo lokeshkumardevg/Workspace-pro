@@ -17,9 +17,9 @@ class AttendanceController extends Controller
     {
         $settings = \App\Models\SystemSetting::all()->pluck('value', 'key');
         return [
-            'lat' => (float) ($settings['office_lat'] ?? 28.61314773529335),
-            'lng' => (float) ($settings['office_lng'] ?? 77.38732458230429),
-            'radius' => (int) ($settings['office_radius'] ?? 200),
+            'lat' => (float) (!empty($settings['office_lat']) ? $settings['office_lat'] : 28.61314773529335),
+            'lng' => (float) (!empty($settings['office_lng']) ? $settings['office_lng'] : 77.38732458230429),
+            'radius' => (int) (!empty($settings['office_radius']) ? $settings['office_radius'] : 200),
         ];
     }
 

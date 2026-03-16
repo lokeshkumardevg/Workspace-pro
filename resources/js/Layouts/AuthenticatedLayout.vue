@@ -41,10 +41,9 @@ const markAllAsRead = () => {
 
         <!-- Sidebar -->
         <aside class="flex-shrink-0 w-64 bg-indigo-900 border-r border-indigo-800 shadow-xl hidden md:flex flex-col transition-all duration-300">
-            <div class="h-16 flex items-center justify-center border-b border-indigo-800 px-4 bg-indigo-950">
-                <Link :href="route('dashboard')" class="flex items-center gap-3 w-full justify-center">
-                    <ApplicationLogo class="block h-8 w-auto fill-current text-white" />
-                    <span class="text-white font-bold text-lg tracking-wide">{{ $page.props.system_settings?.app_name || 'WorkSpace Pro' }}</span>
+            <div class="h-20 flex items-center px-8 border-b border-indigo-800 bg-indigo-950">
+                <Link :href="route('dashboard')" class="flex items-center transition-transform hover:scale-105">
+                    <ApplicationLogo class="h-10 w-auto" />
                 </Link>
             </div>
 

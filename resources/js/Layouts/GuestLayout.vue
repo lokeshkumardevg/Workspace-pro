@@ -13,11 +13,8 @@ import { Link } from '@inertiajs/vue3';
             <div class="absolute bottom-0 left-0 -m-20 w-72 h-72 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
 
             <div class="relative z-10 p-12 text-white flex flex-col justify-center max-w-lg">
-                <Link href="/" class="flex items-center gap-3 mb-10">
-                    <svg class="h-10 w-10 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                    <span class="text-3xl font-extrabold tracking-tight">WorkSpace Pro</span>
+                <Link href="/" class="flex items-center gap-4 mb-12">
+                    <img src="/images/logo.svg" alt="Wheedle 360" class="h-12 w-auto object-contain">
                 </Link>
                 
                 <h1 class="text-5xl font-bold leading-tight mb-6">Manage Everything, <br/> Effortlessly.</h1>

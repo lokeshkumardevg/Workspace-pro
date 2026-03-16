@@ -33,11 +33,8 @@ const submit = () => {
         <div class="mb-10 text-center lg:text-left">
             <div class="lg:hidden flex justify-center mb-6 mt-6">
                 <!-- Mobile Logo -->
-                <Link href="/" class="flex items-center gap-2">
-                    <svg class="h-8 w-8 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                    <span class="text-2xl font-bold text-gray-900 tracking-tight">WorkSpace Pro</span>
+                <Link href="/" class="flex justify-center">
+                    <img src="/images/logo.png" alt="Wheedle 360" class="h-10 w-auto">
                 </Link>
             </div>
             
