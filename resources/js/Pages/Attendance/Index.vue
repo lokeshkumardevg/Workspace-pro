@@ -107,15 +107,15 @@ const clockOut = async () => {
                     <div class="flex items-center gap-3">
                         <span class="text-xl">📍</span>
                         <div class="text-sm">
-                            <p class="font-bold text-indigo-900 uppercase tracking-tight text-xs">Geofencing Active</p>
-                            <p class="text-indigo-600 font-medium tracking-tight">Office Radius: 200m</p>
+                            <p class="font-bold text-indigo-900 uppercase tracking-tight text-xs">Tracking</p>
+                            <p class="text-indigo-600 font-medium tracking-tight">Radius: {{ officeLocation.radius }}m</p>
                         </div>
                     </div>
                     <div class="text-[10px] font-black text-gray-400 uppercase text-right leading-tight">
                         HQ: {{ officeLocation.lat }}, {{ officeLocation.lng }}
-                        <div id="current-coords" class="text-indigo-500 mt-1 lowercase">detecting your location...</div>
+                        <div id="current-coords" class="text-indigo-500 mt-1 lowercase">checking your location...</div>
                         <button v-if="!isLocating" @click="fetchCurrentPosition" class="mt-1 text-indigo-400 hover:text-indigo-600 underline text-[9px] font-black uppercase tracking-widest">
-                            Retry Location
+                            Update Location
                         </button>
                     </div>
                 </div>
@@ -125,7 +125,7 @@ const clockOut = async () => {
                      class="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-4 text-amber-800 shadow-sm animate-pulse-slow">
                     <span class="text-2xl">🎉</span>
                     <div>
-                        <p class="font-bold">Today is a Holiday / Non-working Day!</p>
+                        <p class="font-bold">Today is a Holiday!</p>
                         <p class="text-xs opacity-80">Attendance is optional. Enjoy your day off!</p>
                     </div>
                 </div>
@@ -137,8 +137,8 @@ const clockOut = async () => {
                             <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         </div>
                         <div>
-                            <h3 class="text-lg font-black text-gray-900 leading-tight">Daily Presence</h3>
-                            <p class="text-xs text-gray-400 font-medium">Record your daily shift. Protected by Geofencing.</p>
+                            <h3 class="text-lg font-black text-gray-900 leading-tight">Mark Attendance</h3>
+                            <p class="text-xs text-gray-400 font-medium">Click to clock in or out for today.</p>
                             <div v-if="$page.props.auth.user.allowed_ip" class="mt-1.5 flex items-center gap-1.5">
                                 <span class="bg-indigo-50 text-indigo-600 text-[10px] font-bold px-2 py-0.5 rounded border border-indigo-100 uppercase tracking-tighter shadow-sm">
                                     Home IP: {{ $page.props.auth.user.allowed_ip }}
@@ -188,7 +188,7 @@ const clockOut = async () => {
                         { key: 'status', label: 'Status' }
                     ]"
                     :items="attendances.data"
-                    placeholder="Search by identity or employee contact..."
+                    placeholder="Search logs..."
                     @search="val => search = val"
                 >
                     <template #row="{ item: log }">
@@ -226,7 +226,7 @@ const clockOut = async () => {
                                 </div>
                             </div>
                             <span v-else class="text-[10px] font-black text-gray-300 uppercase tracking-widest italic opacity-50 flex items-center gap-2">
-                                <span class="w-4 h-[1px] bg-gray-200"></span> Null Identity
+                                <span class="w-4 h-[1px] bg-gray-200"></span> Not Logged
                             </span>
                         </td>
                         <td class="px-6 py-6 whitespace-nowrap">
@@ -241,7 +241,7 @@ const clockOut = async () => {
                                 </div>
                             </div>
                             <span v-else class="text-[10px] font-black text-gray-300 uppercase tracking-widest italic opacity-50 flex items-center gap-2">
-                                <span class="w-4 h-[1px] bg-gray-200"></span> Still Operating
+                                <span class="w-4 h-[1px] bg-gray-200"></span> In Office
                             </span>
                         </td>
                         <td class="px-6 py-6 whitespace-nowrap text-right">
@@ -256,7 +256,7 @@ const clockOut = async () => {
                     </template>
                 </DataTable>
 
-                <div class="mt-8">
+                <div class="flex justify-end pr-4 mt-8">
                     <Pagination :links="attendances.links" />
                 </div>
             </div>

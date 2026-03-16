@@ -12,6 +12,9 @@ class LeadController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
+        $isPrivileged = $user->hasPermissionTo('view leads') ||
+                        $user->roles->whereIn('name', ['Super Admin', 'Admin', 'manager', 'team lead'])->count() > 0;
+
         $leadsQuery = Lead::with('assignee', 'creator')->orderBy('created_at', 'desc');
 
         if ($request->search) {
@@ -22,12 +25,12 @@ class LeadController extends Controller
             });
         }
 
-        if (!$user->roles->contains('name', 'Super Admin') && !$user->roles->contains('name', 'Admin')) {
+        if (!$isPrivileged) {
             $leadsQuery->where('assigned_to', $user->id);
         }
 
         $leads = $leadsQuery->paginate(10)->withQueryString();
-        $users = User::role(['Employee', 'Admin', 'Super Admin'])->get();
+        $users = User::whereHas('roles', fn($q) => $q->whereIn('name', ['Employee', 'Admin', 'Super Admin', 'manager', 'team lead', 'HR']))->get();
 
         // Zoho-style Analytics
         $stats = [

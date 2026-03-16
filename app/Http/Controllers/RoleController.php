@@ -17,7 +17,7 @@ class RoleController extends Controller
             $query->where('name', 'like', "%{$request->search}%");
         }
 
-        $roles = $query->paginate(15)->withQueryString();
+        $roles = $query->paginate(5)->withQueryString();
         $allPermissions = Permission::all();
 
         return Inertia::render('Roles/Index', [

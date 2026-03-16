@@ -47,20 +47,20 @@ const updateStatus = (leadId, status) => {
 </script>
 
 <template>
-    <Head title="Leads CRM | Intelligent Pipeline" />
+    <Head title="Leads" />
 
     <AuthenticatedLayout>
         <template #header>
             <div class="flex flex-col md:flex-row justify-between md:items-center w-full gap-6">
                 <div>
                     <h2 class="text-3xl font-black leading-tight text-gray-900 uppercase tracking-tighter">
-                        Sales Force <span class="text-indigo-600">Command</span>
+                        Leads <span class="text-indigo-600">CRM</span>
                     </h2>
-                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-[0.2em] mt-1">Intelligence-Driven Lead Lifecycle Management</p>
+                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-[0.2em] mt-1">Manage your sales leads and pipeline</p>
                 </div>
                 <button v-if="$page.props.auth.user.permissions.includes('manage leads') || $page.props.auth.user.roles.includes('Super Admin')" @click="showCreateModal = true" class="bg-gray-900 hover:bg-indigo-600 text-white px-8 py-3.5 rounded-2xl font-black shadow-xl shadow-indigo-100 transition-all flex items-center gap-3 text-[10px] uppercase tracking-widest active:scale-95">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>
-                    Ingest Prospect
+                    Add Lead
                 </button>
             </div>
         </template>
@@ -68,21 +68,21 @@ const updateStatus = (leadId, status) => {
         <div class="py-8">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
                 
-                <!-- Zoho-Style KPI Intelligence -->
+                <!-- Leads Statistics -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                     <div class="bg-white border-2 border-gray-50 p-6 rounded-[2rem] shadow-sm hover:shadow-xl transition-all group overflow-hidden relative">
                         <div class="absolute -right-4 -top-8 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity">
                             <svg class="h-32 w-32 text-gray-900" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
                         </div>
-                        <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Pipeline</p>
+                        <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Leads</p>
                         <h3 class="text-4xl font-black text-gray-900">{{ stats.total }}</h3>
                         <div class="mt-4 flex items-center gap-2 text-[9px] font-black text-gray-400 uppercase tracking-tighter">
-                            <span class="w-1.5 h-1.5 rounded-full bg-gray-200"></span> Global Database
+                            <span class="w-1.5 h-1.5 rounded-full bg-gray-200"></span> Total Database
                         </div>
                     </div>
 
                     <div class="bg-white border-2 border-gray-50 p-6 rounded-[2rem] shadow-sm hover:shadow-xl transition-all group overflow-hidden relative">
-                        <p class="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1">Incoming Velocity</p>
+                        <p class="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1">New Leads</p>
                         <h3 class="text-4xl font-black text-gray-900">{{ stats.new }}</h3>
                         <div class="mt-4 flex items-center gap-2 text-[9px] font-black text-indigo-600 uppercase tracking-tighter bg-indigo-50 w-max px-2 py-0.5 rounded-lg">
                             <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span> New Requests
@@ -90,19 +90,19 @@ const updateStatus = (leadId, status) => {
                     </div>
 
                     <div class="bg-white border-2 border-gray-50 p-6 rounded-[2rem] shadow-sm hover:shadow-xl transition-all group overflow-hidden relative border-amber-100">
-                        <p class="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-1">Filtered Leads</p>
+                        <p class="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-1">Qualified Leads</p>
                         <h3 class="text-4xl font-black text-gray-900">{{ stats.qualified }}</h3>
                         <div class="mt-4 flex items-center gap-2 text-[9px] font-black text-amber-600 uppercase tracking-tighter">
-                             Verified Potential
+                             Qualified
                         </div>
                     </div>
 
                     <div class="bg-indigo-600 p-6 rounded-[2rem] shadow-xl shadow-indigo-100 group overflow-hidden relative">
                         <div class="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none"></div>
-                        <p class="text-[10px] font-black text-indigo-200 uppercase tracking-widest mb-1">Conversion Alpha</p>
+                        <p class="text-[10px] font-black text-indigo-200 uppercase tracking-widest mb-1">Conversion Rate</p>
                         <h3 class="text-4xl font-black text-white">{{ stats.conversion_rate }}%</h3>
                         <div class="mt-4 flex items-center gap-2 text-[9px] font-black text-indigo-100 uppercase tracking-tighter">
-                             Success Metrics
+                             Percentage
                         </div>
                     </div>
 
@@ -110,20 +110,20 @@ const updateStatus = (leadId, status) => {
                         <p class="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1">Closed Deals</p>
                         <h3 class="text-4xl font-black text-gray-900">{{ stats.won }}</h3>
                         <div class="mt-4 flex items-center gap-2 text-[9px] font-black text-emerald-600 uppercase tracking-tighter bg-emerald-50 w-max px-2 py-0.5 rounded-lg">
-                             Won Status
+                             Won Deals
                         </div>
                     </div>
                 </div>
                 
                 <DataTable 
                     :headers="[
-                        { key: 'name', label: 'Lead Identity', sortable: true },
-                        { key: 'contact', label: 'Contact Profile' },
-                        { key: 'assignee', label: 'Sales Officer' },
-                        { key: 'status', label: 'Lead Stage' }
+                        { key: 'name', label: 'Lead Name', sortable: true },
+                        { key: 'contact', label: 'Contact Info' },
+                        { key: 'assignee', label: 'Assigned To' },
+                        { key: 'status', label: 'Status' }
                     ]"
                     :items="leads.data"
-                    placeholder="Search by identity, email or company..."
+                    placeholder="Search leads..."
                     @search="val => search = val"
                 >
                     <template #row="{ item: lead }">
@@ -187,58 +187,60 @@ const updateStatus = (leadId, status) => {
                     </template>
                 </DataTable>
 
-                <Pagination :links="leads.links" class="mt-8" />
+                <div class="flex justify-end pr-4 mt-8">
+                    <Pagination :links="leads.links" />
+                </div>
             </div>
         </div>
 
-        <Modal :show="showCreateModal" @close="showCreateModal = false" title="Ingest New Prospect" maxWidth="2xl">
+        <Modal :show="showCreateModal" @close="showCreateModal = false" title="Add New Lead" maxWidth="2xl">
             <form @submit.prevent="createLead" class="space-y-8">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div>
-                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Identity Profile (Name)</label>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Full Name</label>
                         <input v-model="form.name" type="text" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner py-3.5" required placeholder="John Smith..." />
                     </div>
                     <div>
-                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Organization / Entity</label>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Company Name</label>
                         <input v-model="form.company" type="text" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner py-3.5" placeholder="Enterprise Co..." />
                     </div>
 
                     <div>
-                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Communications (Email)</label>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Email Address</label>
                         <input v-model="form.email" type="email" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner py-3.5" required placeholder="john@enterprise.com" />
                     </div>
                     <div>
-                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Direct Line (Phone)</label>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Phone Number</label>
                         <input v-model="form.phone" type="text" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner py-3.5" placeholder="+1..." />
                     </div>
 
                     <div>
-                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Inflow Source</label>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Lead Source</label>
                         <select v-model="form.source" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner py-3.5">
-                            <option value="">Undisclosed</option>
-                            <option value="website">Corporate Website</option>
-                            <option value="referral">Internal Referral</option>
-                            <option value="social">Intelligence (Social)</option>
-                            <option value="cold_call">Cold Outreach</option>
+                            <option value="">Select Source</option>
+                            <option value="website">Website</option>
+                            <option value="referral">Referral</option>
+                            <option value="social">Social Media</option>
+                            <option value="cold_call">Cold Call</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Executive Assignment</label>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Assign To</label>
                         <select v-model="form.assigned_to" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner py-3.5">
-                            <option value="">Global Pipeline</option>
+                            <option value="">Unassigned</option>
                             <option v-for="u in users" :key="u.id" :value="u.id">{{ u.name }}</option>
                         </select>
                     </div>
 
                     <div class="md:col-span-2">
-                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Strategic Intel (Notes)</label>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Notes / Remarks</label>
                         <textarea v-model="form.notes" rows="3" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner placeholder-gray-300" placeholder="Specific requirements or budget constraints..."></textarea>
                     </div>
                 </div>
 
                 <div class="flex items-center justify-end gap-4 pt-4">
-                    <button type="button" @click="showCreateModal = false" class="px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-all active:scale-95">Discard</button>
-                    <button type="submit" :disabled="form.processing" class="px-12 py-3.5 bg-indigo-600 hover:bg-gray-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-100 active:scale-95">Ingest Prospect</button>
+                    <button type="button" @click="showCreateModal = false" class="px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-all active:scale-95">Cancel</button>
+                    <button type="submit" :disabled="form.processing" class="px-12 py-3.5 bg-indigo-600 hover:bg-gray-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-100 active:scale-95">Add Lead</button>
                 </div>
             </form>
         </Modal>

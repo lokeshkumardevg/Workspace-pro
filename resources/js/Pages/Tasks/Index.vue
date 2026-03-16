@@ -3,7 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Pagination from '@/Components/Pagination.vue';
 import DataTable from '@/Components/DataTable.vue';
 import Modal from '@/Components/Modal.vue';
-import { Head, useForm, router } from '@inertiajs/vue3';
+import { Head, useForm, router, usePage } from '@inertiajs/vue3';
 import { ref, watch, reactive, nextTick } from 'vue';
 import debounce from 'lodash/debounce';
 
@@ -15,6 +15,8 @@ const props = defineProps({
     performanceLabel: String,
     filters: Object,
 });
+
+const page = usePage();
 
 const filter = reactive({
     search: props.filters?.search || '',
@@ -38,8 +40,11 @@ watch(() => filter.filter_type, () => {
 watch(() => filter.start_date, updateFilters);
 watch(() => filter.end_date, updateFilters);
 
-const exportTasks = () => {
-    const params = new URLSearchParams(filter).toString();
+const showExportDropdown = ref(false);
+
+const exportTasks = (format = 'excel') => {
+    showExportDropdown.value = false;
+    const params = new URLSearchParams({ ...filter, format }).toString();
     window.location.href = route('tasks.export') + '?' + params;
 };
 
@@ -47,7 +52,7 @@ const exportTasks = () => {
 const showCreateModal = ref(false);
 const form = useForm({
     project_id: '',
-    assigned_to: '',
+    assigned_to: page.props.auth?.user?.id || '',
     title: '',
     description: '',
     due_date: '',
@@ -143,14 +148,14 @@ const formatDate = (d) => {
         <template #header>
             <div class="flex flex-col md:flex-row justify-between md:items-center w-full gap-6">
                 <h2 class="text-2xl font-black leading-tight text-gray-800 uppercase tracking-tighter">
-                    Task Management & Progress
+                    Tasks
                 </h2>
 
                 <div class="flex items-center gap-4 ml-auto">
                     <!-- Performance Widget -->
                     <div v-if="performance !== null" class="hidden sm:flex bg-white border-2 border-indigo-100 rounded-2xl px-5 py-2 flex items-center gap-4 shadow-sm group hover:shadow-md transition-all">
                         <div class="flex flex-col">
-                            <span class="text-[10px] font-black text-indigo-600 uppercase tracking-widest leading-tight">{{ performanceLabel }}</span>
+                            <span class="text-[10px] font-black text-indigo-600 uppercase tracking-widest leading-tight">Performance</span>
                             <span class="text-xl font-black text-gray-900 leading-none">{{ performance }}%</span>
                         </div>
                         <div class="w-12 bg-gray-100 rounded-full h-2 overflow-hidden shadow-inner border border-gray-50">
@@ -159,14 +164,21 @@ const formatDate = (d) => {
                     </div>
 
                     <div class="flex items-center gap-2">
-                        <button @click="exportTasks" class="bg-white hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-xl font-bold border-2 border-gray-100 shadow-sm transition-all flex items-center gap-2 text-[11px] uppercase whitespace-nowrap">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                            Export
+                        <!-- Excel Export -->
+                        <button @click="exportTasks('excel')" class="bg-[#2CA01C] hover:bg-[#238016] text-white px-4 py-2.5 rounded-xl font-bold shadow-md hover:shadow-xl transition-all flex items-center gap-2 text-[10px] uppercase whitespace-nowrap active:scale-95">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                            Export Excel
                         </button>
 
-                        <button v-if="$page.props.auth.user.permissions.includes('manage tasks') || $page.props.auth.user.roles.some(r => ['Super Admin', 'Admin', 'Manager', 'Team Lead', 'Leader'].includes(r))" @click="showCreateModal = true" class="bg-indigo-600 hover:bg-gray-900 text-white px-5 py-2.5 rounded-xl font-bold shadow-md hover:shadow-xl transition-all flex items-center gap-2 text-[11px] uppercase whitespace-nowrap active:scale-95">
+                        <!-- Word Export -->
+                        <button @click="exportTasks('doc')" class="bg-indigo-600 hover:bg-gray-900 text-white px-4 py-2.5 rounded-xl font-bold shadow-md hover:shadow-xl transition-all flex items-center gap-2 text-[10px] uppercase whitespace-nowrap active:scale-95">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                            Export Word
+                        </button>
+
+                        <button v-if="page.props.auth?.user" @click="showCreateModal = true" class="bg-indigo-600 hover:bg-gray-900 text-white px-5 py-2.5 rounded-xl font-bold shadow-md hover:shadow-xl transition-all flex items-center gap-2 text-[11px] uppercase whitespace-nowrap active:scale-95">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" /></svg>
-                            Add New Task
+                            Add Task
                         </button>
                     </div>
                 </div>
@@ -180,9 +192,9 @@ const formatDate = (d) => {
                 <div class="bg-white border-2 border-gray-100 rounded-3xl p-6 shadow-sm">
                     <div class="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-4 items-end">
                         <div class="lg:col-span-2">
-                            <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Search Keywords</label>
+                            <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Search</label>
                             <div class="relative">
-                                <input v-model="filter.search" type="text" placeholder="Title, description..." class="w-full pl-10 pr-3 py-2.5 bg-gray-50 border-gray-100 rounded-xl focus:ring-[#2CA01C] focus:border-[#2CA01C] text-sm font-bold placeholder-gray-300 transition-all shadow-inner" />
+                                <input v-model="filter.search" type="text" placeholder="Search tasks..." class="w-full pl-10 pr-3 py-2.5 bg-gray-50 border-gray-100 rounded-xl focus:ring-[#2CA01C] focus:border-[#2CA01C] text-sm font-bold placeholder-gray-300 transition-all shadow-inner" />
                                 <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                                     <svg class="h-4 w-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                                 </div>
@@ -193,6 +205,7 @@ const formatDate = (d) => {
                             <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Time Period</label>
                             <select v-model="filter.filter_type" class="w-full bg-gray-50 border-gray-100 rounded-xl focus:ring-[#2CA01C] focus:border-[#2CA01C] text-sm font-bold transition-all shadow-inner">
                                 <option value="all">All Time</option>
+                                <option value="daily">Today</option>
                                 <option value="weekly">This Week</option>
                                 <option value="monthly">This Month</option>
                                 <option value="custom">Custom Range</option>
@@ -215,14 +228,14 @@ const formatDate = (d) => {
                 <!-- Enhanced Operational DataTable -->
                 <DataTable 
                     :headers="[
-                        { key: 'title', label: 'Task Information', sortable: true },
+                        { key: 'title', label: 'Task Name', sortable: true },
                         { key: 'project', label: 'Project' },
                         { key: 'assignee', label: 'Assigned To' },
                         { key: 'status', label: 'Status' },
-                        { key: 'actions', label: 'Messages' }
+                        { key: 'actions', label: 'Comments' }
                     ]"
                     :items="tasks.data"
-                    placeholder="Search by mission title, description or specialist..."
+                    placeholder="Search tasks..."
                     @search="val => filter.search = val"
                 >
                     <template #row="{ item: task }">
@@ -269,7 +282,7 @@ const formatDate = (d) => {
                                 <div class="flex flex-col">
                                     <div class="flex items-center gap-2">
                                         <span class="text-xs font-black text-gray-900 uppercase tracking-tight">{{ task.assignee ? task.assignee.name : 'Unassigned' }}</span>
-                                        <button v-if="$page.props.auth.user.permissions.includes('manage tasks') || $page.props.auth.user.roles.some(r => ['Super Admin', 'Admin', 'Manager'].includes(r))" 
+                                        <button v-if="$page.props.auth.user.permissions.includes('manage tasks') || $page.props.auth.user.roles.some(r => ['Super Admin', 'Admin', 'manager', 'team lead', 'Manager', 'Team Lead'].includes(r))" 
                                                 @click="openReassignModal(task)" 
                                                 class="p-1 bg-gray-50 text-indigo-600 rounded-lg border border-gray-100 hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
                                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
@@ -285,8 +298,8 @@ const formatDate = (d) => {
                                 'bg-emerald-50 text-emerald-700': task.status === 'completed'
                             }">
                                 <option value="pending">⏳ Pending</option>
-                                <option value="in_progress">🔄 Active</option>
-                                <option value="completed">✅ Finalized</option>
+                                <option value="in_progress">🔄 In Progress</option>
+                                <option value="completed">✅ Completed</option>
                             </select>
                         </td>
                         <td class="px-6 py-6 whitespace-nowrap">
@@ -298,13 +311,13 @@ const formatDate = (d) => {
                                         <span class="relative inline-flex rounded-full h-5 w-5 bg-rose-600 text-[9px] font-black text-white items-center justify-center border-2 border-white">{{ task.comments.length }}</span>
                                     </span>
                                 </button>
-                                <button @click="openCommunication(task)" class="bg-gray-50 hover:bg-gray-100 text-[10px] font-black uppercase text-gray-400 px-4 py-2.5 rounded-xl border border-gray-100 active:scale-95 transition-all">Review Details</button>
+                                <button @click="openCommunication(task)" class="bg-gray-50 hover:bg-gray-100 text-[10px] font-black uppercase text-gray-400 px-4 py-2.5 rounded-xl border border-gray-100 active:scale-95 transition-all">Details</button>
                             </div>
                         </td>
                     </template>
                 </DataTable>
 
-                <div class="mt-8 flex justify-center">
+                <div class="flex justify-end pr-4">
                     <Pagination :links="tasks.links" />
                 </div>
             </div>
@@ -320,7 +333,7 @@ const formatDate = (d) => {
                             <!-- Header -->
                             <div v-if="selectedTask" class="bg-gray-50 px-8 py-8 border-b border-gray-100">
                                 <div class="flex items-center justify-between">
-                                    <h2 class="text-xl font-black text-gray-900 uppercase tracking-tighter" id="slide-over-title">Communication Desk</h2>
+                                    <h2 class="text-xl font-black text-gray-900 uppercase tracking-tighter" id="slide-over-title">Task Comments</h2>
                                     <button @click="showCommunicationDesk = false" class="text-gray-400 hover:text-gray-900">
                                         <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                                     </button>
@@ -359,18 +372,18 @@ const formatDate = (d) => {
                             <!-- Input Area -->
                             <div class="p-8 bg-white border-t border-gray-100">
                                 <form @submit.prevent="postComment" class="space-y-4">
-                                    <textarea v-model="commentForm.comment" rows="3" class="w-full bg-gray-50 border-gray-100 rounded-2xl focus:ring-[#2CA01C] focus:border-[#2CA01C] text-xs font-bold shadow-inner placeholder-gray-300 transition-all" placeholder="Explain the issue or update team lead..." required></textarea>
+                                    <textarea v-model="commentForm.comment" rows="3" class="w-full bg-gray-50 border-gray-100 rounded-2xl focus:ring-[#2CA01C] focus:border-[#2CA01C] text-xs font-bold shadow-inner placeholder-gray-300 transition-all" placeholder="Write a comment..." required></textarea>
                                     
                                     <div class="flex items-center justify-between gap-4">
                                         <div class="flex-1">
                                             <label class="relative flex items-center justify-center px-4 py-2 bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:bg-gray-100 transition-all group">
                                                 <svg class="w-4 h-4 text-gray-400 group-hover:text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                                                <span class="ml-2 text-[10px] font-black uppercase text-gray-400 group-hover:text-indigo-600">{{ commentForm.attachment ? 'File Added' : 'Add Screenshot' }}</span>
+                                                <span class="ml-2 text-[10px] font-black uppercase text-gray-400 group-hover:text-indigo-600">{{ commentForm.attachment ? 'File Added' : 'Add File' }}</span>
                                                 <input type="file" @change="handleFile" class="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" />
                                             </label>
                                         </div>
                                         <button type="submit" :disabled="commentForm.processing" class="bg-indigo-600 hover:bg-gray-900 text-white px-6 py-2.5 rounded-xl font-black uppercase text-xs shadow-md active:scale-95 transition-all">
-                                            Send
+                                            Post
                                         </button>
                                     </div>
                                 </form>
@@ -386,64 +399,64 @@ const formatDate = (d) => {
             <form @submit.prevent="createTask" class="space-y-8">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div>
-                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Strategic Project Link</label>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Select Project</label>
                         <select v-model="form.project_id" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner py-3.5" required>
-                            <option value="" disabled>Select Objective</option>
+                            <option value="" disabled>Select Project</option>
                             <option v-for="proj in projects" :key="proj.id" :value="proj.id">{{ proj.name }}</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Assigned Operational Asset</label>
-                        <select v-model="form.assigned_to" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner py-3.5" required>
-                            <option value="" disabled>Select Specialist</option>
-                            <option v-for="u in users" :key="u.id" :value="u.id">{{ u.name }}</option>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Assign To</label>
+                        <select v-model="form.assigned_to" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner py-3.5" :disabled="!$page.props.auth.user.roles.some(r => ['Super Admin', 'Admin', 'manager', 'team lead', 'Manager', 'Team Lead'].includes(r))" required>
+                            <option value="" disabled>Select Employee</option>
+                            <option v-for="u in users" :key="u.id" :value="u.id">{{ u.id === $page.props.auth.user.id ? 'Myself' : u.name }}</option>
                         </select>
                     </div>
                     <div class="md:col-span-2">
-                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Mission Identifier (Title)</label>
-                        <input v-model="form.title" type="text" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner py-3.5" required placeholder="Project Breakthrough Operation..." />
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Task Title</label>
+                        <input v-model="form.title" type="text" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner py-3.5" required placeholder="Enter task title..." />
                     </div>
                     <div class="md:col-span-2">
-                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Execution Protocol (Description)</label>
-                        <textarea v-model="form.description" rows="4" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner placeholder-gray-300" placeholder="Detailed technical instructions for implementation..."></textarea>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Description</label>
+                        <textarea v-model="form.description" rows="4" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner placeholder-gray-300" placeholder="Enter task details..."></textarea>
                     </div>
                     <div>
-                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Critical Deadline</label>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Due Date</label>
                         <input v-model="form.due_date" type="date" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-bold shadow-inner py-3.5" />
                     </div>
                     <div>
-                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Operational Priority</label>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Priority</label>
                         <select v-model="form.priority" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner py-3.5" required>
-                            <option value="low">🟢 Low Intensity</option>
-                            <option value="medium">🟡 Standard Flow</option>
-                            <option value="high">🟠 Strategic High</option>
-                            <option value="urgent">🔴 CRITICAL URGENT</option>
+                            <option value="low">🟢 Low</option>
+                            <option value="medium">🟡 Medium</option>
+                            <option value="high">🟠 High</option>
+                            <option value="urgent">🔴 Urgent</option>
                         </select>
                     </div>
                 </div>
 
                 <div class="flex items-center justify-end gap-4 pt-4">
-                    <button type="button" @click="showCreateModal = false" class="px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-all active:scale-95">Abort Mission</button>
-                    <button type="submit" :disabled="form.processing" class="px-12 py-3.5 bg-indigo-600 hover:bg-gray-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-100 active:scale-95">Deploy Task</button>
+                    <button type="button" @click="showCreateModal = false" class="px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-all active:scale-95">Cancel</button>
+                    <button type="submit" :disabled="form.processing" class="px-12 py-3.5 bg-indigo-600 hover:bg-gray-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-100 active:scale-95">Save Task</button>
                 </div>
             </form>
         </Modal>
 
         <!-- Reassign Task Modal -->
-        <Modal :show="showReassignModal" @close="showReassignModal = false" title="Re-Delegate Authority" maxWidth="md">
+        <Modal :show="showReassignModal" @close="showReassignModal = false" title="Reassign Task" maxWidth="md">
             <form v-if="selectedTask" @submit.prevent="submitReassign" class="space-y-8">
                 <div class="p-6 bg-gray-50 rounded-[2rem] border border-gray-100 flex flex-col items-center text-center">
                     <div class="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm mb-4 border border-indigo-50">
                         <svg class="h-8 w-8 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                     </div>
-                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Active Mission</p>
+                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Task</p>
                     <p class="text-sm font-black text-gray-800 uppercase tracking-tight">{{ selectedTask.title }}</p>
                 </div>
 
                 <div>
-                    <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">New Operational Owner</label>
+                    <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">New Owner</label>
                     <select v-model="reassignForm.assigned_to" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner py-3.5" required>
-                        <option value="" disabled>Select Specialist</option>
+                        <option value="" disabled>Select Employee</option>
                         <option v-for="u in users" :key="u.id" :value="u.id" :disabled="u.id === selectedTask.assigned_to">
                             {{ u.name }} {{ u.id === selectedTask.assigned_to ? '(Current)' : '' }}
                         </option>
@@ -452,7 +465,7 @@ const formatDate = (d) => {
 
                 <div class="flex items-center justify-end gap-3 pt-4">
                     <button type="button" @click="showReassignModal = false" class="px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-all">Cancel</button>
-                    <button type="submit" :disabled="reassignForm.processing" class="bg-indigo-600 hover:bg-gray-900 text-white px-8 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] shadow-lg transition-all active:scale-95">Authorize Transfer</button>
+                    <button type="submit" :disabled="reassignForm.processing" class="bg-indigo-600 hover:bg-gray-900 text-white px-8 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] shadow-lg transition-all active:scale-95">Update</button>
                 </div>
             </form>
         </Modal>

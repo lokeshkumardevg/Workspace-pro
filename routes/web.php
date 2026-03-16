@@ -115,6 +115,7 @@ Route::middleware('auth')->group(function () {
     // Users and Roles
     Route::get('/users', [\App\Http\Controllers\UserController::class, 'index'])->name('users.index');
     Route::put('/users/{user}', [\App\Http\Controllers\UserController::class, 'update'])->name('users.update');
+    Route::delete('/users/{user}', [\App\Http\Controllers\UserController::class, 'destroy'])->name('users.destroy');
     Route::post('/users/{user}/sync-roles', [\App\Http\Controllers\UserController::class, 'syncRoles'])->name('users.sync-roles');
 
     Route::resource('roles', \App\Http\Controllers\RoleController::class)->only(['index', 'store', 'update', 'destroy']);
@@ -134,6 +135,16 @@ Route::middleware('auth')->group(function () {
     // System Settings & Branding
     Route::get('/settings', [\App\Http\Controllers\SettingsController::class, 'index'])->name('settings.index');
     Route::post('/settings', [\App\Http\Controllers\SettingsController::class, 'update'])->name('settings.update');
+
+    // Holidays
+    Route::resource('holidays', \App\Http\Controllers\HolidayController::class);
+
+    // Payroll
+    Route::get('/payroll', [\App\Http\Controllers\PayrollController::class, 'index'])->name('payroll.index');
+    Route::post('/payroll', [\App\Http\Controllers\PayrollController::class, 'store'])->name('payroll.store');
+    Route::post('/payroll/auto-generate', [\App\Http\Controllers\PayrollController::class, 'autoGenerate'])->name('payroll.auto-generate');
+    Route::put('/payroll/{payroll}/status', [\App\Http\Controllers\PayrollController::class, 'updateStatus'])->name('payroll.status');
+    Route::delete('/payroll/{payroll}', [\App\Http\Controllers\PayrollController::class, 'destroy'])->name('payroll.destroy');
 });
 
 require __DIR__ . '/auth.php';

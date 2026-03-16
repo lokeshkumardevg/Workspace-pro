@@ -38,7 +38,7 @@ const greeting = computed(() => {
                                 {{ greeting }},
                             </p>
                             <h1 class="text-3xl font-black text-gray-900 leading-tight tracking-tight">{{ $page.props.auth.user.name }}</h1>
-                            <p class="text-gray-500 mt-2 text-sm max-w-lg font-medium">Welcome back to your central command. Tracking progress across all operations.</p>
+                            <p class="text-gray-500 mt-2 text-sm max-w-lg font-medium">Welcome back to your dashboard. Stay updated with your progress.</p>
                         </div>
                         <div class="flex items-center gap-3 flex-shrink-0">
                             <span class="text-[10px] bg-indigo-50 text-indigo-600 border border-indigo-100 px-4 py-2 rounded-xl font-black uppercase tracking-widest inline-flex items-center gap-2 shadow-sm">
@@ -211,7 +211,7 @@ const greeting = computed(() => {
 
                 <!-- Advanced Middle Row: Project Progress -->
                 <div v-if="stats.project_progress?.length > 0">
-                    <h2 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 px-1 text-indigo-900 border-l-4 border-indigo-600 pl-3 ml-1">Project Milestones</h2>
+                    <h2 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 px-1 text-indigo-900 border-l-4 border-indigo-600 pl-3 ml-1">Project Progress</h2>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <div v-for="proj in stats.project_progress" :key="proj.id" class="bg-white border border-gray-200 rounded-3xl p-5 shadow-sm hover:shadow-xl transition-all duration-300 group">
                             <div class="flex items-center justify-between mb-3">
@@ -237,7 +237,7 @@ const greeting = computed(() => {
                         <div class="px-8 py-6 border-b border-gray-50 flex items-center justify-between bg-gray-50/30">
                             <h3 class="font-black text-gray-900 text-[10px] uppercase tracking-widest flex items-center gap-2">
                                 <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-                                Live Coordination Feed
+                                Recent Activity Feed
                             </h3>
                             <span class="text-[10px] font-black text-indigo-600 bg-white px-3 py-1 rounded-xl shadow-sm border border-gray-100 uppercase">Updates</span>
                         </div>
@@ -250,7 +250,7 @@ const greeting = computed(() => {
                                     <div class="flex items-center justify-between mb-1">
                                         <p class="text-sm font-black text-gray-900 leading-tight">
                                             {{ activity.user.name }} 
-                                            <span class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mx-1 opacity-60">Posted on</span> 
+                                            <span class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mx-1 opacity-60">On task</span> 
                                             <span class="text-indigo-600 group-hover:underline cursor-pointer">{{ activity.task.title }}</span>
                                         </p>
                                         <span class="text-[9px] text-gray-300 font-black uppercase tracking-tighter">{{ new Date(activity.created_at).toLocaleTimeString() }}</span>
@@ -264,7 +264,7 @@ const greeting = computed(() => {
                             </div>
                             <div v-if="stats.recent_activity?.length === 0" class="flex flex-col items-center justify-center py-28 opacity-20 bg-gray-50/20">
                                 <svg class="w-16 h-16 mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"></path></svg>
-                                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">No recent activity detected</p>
+                                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">No recent activity found</p>
                             </div>
                         </div>
                     </div>

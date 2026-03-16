@@ -1,10 +1,11 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, useForm, usePage } from '@inertiajs/vue3';
+import Pagination from '@/Components/Pagination.vue';
+import { Head, useForm, usePage, Link } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
 
 const props = defineProps({
-    announcements: Array
+    announcements: Object
 });
 
 const showModal = ref(false);
@@ -58,7 +59,7 @@ const getTypeIcon = (type) => {
                 <button v-if="canManage" @click="showModal = true" 
                         class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-2xl font-black uppercase text-xs shadow-md active:scale-95 transition-all flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
-                    New Broadcasting
+                    Post Announcement
                 </button>
             </div>
         </template>
@@ -66,7 +67,7 @@ const getTypeIcon = (type) => {
         <div class="py-10 px-4 sm:px-6 lg:px-8">
             <div class="max-w-4xl mx-auto space-y-6">
                 
-                <div v-for="item in announcements" :key="item.id" 
+                <div v-for="item in announcements.data" :key="item.id" 
                      class="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
                     <div class="p-8">
                         <div class="flex items-start justify-between gap-4 mb-4">
@@ -92,9 +93,14 @@ const getTypeIcon = (type) => {
                     </div>
                 </div>
 
-                <div v-if="announcements.length === 0" class="text-center py-20 bg-gray-50 rounded-[3rem] border-2 border-dashed border-gray-200">
+                <div v-if="announcements.data.length === 0" class="text-center py-20 bg-gray-50 rounded-[3rem] border-2 border-dashed border-gray-200">
                     <span class="text-6xl mb-4 block">🤫</span>
                     <p class="text-gray-400 font-black uppercase tracking-widest text-sm">No active announcements</p>
+                </div>
+
+                <!-- Pagination -->
+                <div v-if="announcements.links.length > 0" class="flex justify-end pr-4">
+                    <Pagination :links="announcements.links" />
                 </div>
 
             </div>
@@ -108,7 +114,7 @@ const getTypeIcon = (type) => {
                 <div class="inline-block align-bottom bg-white rounded-[2.5rem] text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full">
                     <form @submit.prevent="submit">
                         <div class="bg-white p-8">
-                            <h3 class="text-2xl font-black text-gray-900 mb-6 uppercase tracking-tighter">Global Broadcast</h3>
+                            <h3 class="text-2xl font-black text-gray-900 mb-6 uppercase tracking-tighter">New Announcement</h3>
                             <div class="space-y-5">
                                 <div>
                                     <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Title</label>
@@ -136,7 +142,7 @@ const getTypeIcon = (type) => {
                         </div>
                         <div class="bg-gray-50 p-8 flex gap-4">
                             <button type="submit" :disabled="form.processing" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-2xl font-black uppercase text-sm shadow-lg transition-all disabled:opacity-50">
-                                {{ form.processing ? 'Broadcasting...' : '🚀 Blast to Office' }}
+                                {{ form.processing ? 'Posting...' : '🚀 Post Announcement' }}
                             </button>
                             <button type="button" @click="showModal = false" class="px-8 bg-white border border-gray-200 text-gray-600 py-3 rounded-2xl font-black uppercase text-sm hover:bg-gray-100 transition-all text-center">
                                 Close

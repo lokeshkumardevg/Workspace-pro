@@ -45,7 +45,7 @@ class AttendanceController extends Controller
             $query->where('user_id', $user->id);
         }
 
-        $attendances = $query->paginate(15)->withQueryString();
+        $attendances = $query->paginate(8)->withQueryString();
 
         $todayAttendance = Attendance::where('user_id', $user->id)
             ->where('date', Carbon::today())
@@ -88,21 +88,26 @@ class AttendanceController extends Controller
         $lat = $request->lat;
         $lng = $request->lng;
 
-        // 🛡️ Geofencing Enforcement
-        if (!$lat || !$lng) {
-            return redirect()->back()->with('error', '❌ Location access is required for attendance.');
-        }
+        // 🔑 Super Admin / Bypass check
+        $isSuperAdmin = $user->hasRole('Super Admin') || $user->attendance_bypass;
 
-        $office = $this->getOfficeConfig();
-        $distance = $this->calculateDistance($lat, $lng, $office['lat'], $office['lng']);
+        if (!$isSuperAdmin) {
+            // 🛡️ Geofencing Enforcement
+            if (!$lat || !$lng) {
+                return redirect()->back()->with('error', '❌ Location access is required for attendance.');
+            }
 
-        if ($distance > $office['radius']) {
-            return redirect()->back()->with('error', sprintf('❌ Outside Office Boundary. You are %.2f meters away.', $distance));
-        }
+            $office = $this->getOfficeConfig();
+            $distance = $this->calculateDistance($lat, $lng, $office['lat'], $office['lng']);
 
-        // 🛡️ IP Enforcement
-        if ($user->allowed_ip && $request->ip() !== $user->allowed_ip) {
-            return redirect()->back()->with('error', '❌ Attendance not allowed from this IP. Current IP: ' . $request->ip());
+            if ($distance > $office['radius']) {
+                return redirect()->back()->with('error', sprintf('❌ Outside Office Boundary. You are %.2f meters away.', $distance));
+            }
+
+            // 🛡️ IP Enforcement
+            if ($user->allowed_ip && $request->ip() !== $user->allowed_ip) {
+                return redirect()->back()->with('error', '❌ Attendance not allowed from this IP. Current IP: ' . $request->ip());
+            }
         }
 
         // Holiday Check
@@ -119,14 +124,18 @@ class AttendanceController extends Controller
 
         if (!$attendance->clock_in) {
             $attendance->update([
-                'clock_in' => Carbon::now()->format('H:i:s'),
+                'clock_in'    => Carbon::now()->format('H:i:s'),
                 'clock_in_ip' => $request->ip(),
                 'lat' => $lat,
                 'lng' => $lng,
             ]);
         }
 
-        return redirect()->back()->with('success', '✅ Clocked in successfully from office location.');
+        $msg = $isSuperAdmin && !($lat && $lng)
+            ? '✅ Clocked in (Bypassed location check — Super Admin mode.)'
+            : '✅ Clocked in successfully from office location.';
+
+        return redirect()->back()->with('success', $msg);
     }
 
     public function clockOut(Request $request)
@@ -136,35 +145,40 @@ class AttendanceController extends Controller
         $lng = $request->lng;
         $date = Carbon::today();
 
-        // 🛡️ Geofencing Enforcement for Clock Out
-        if (!$lat || !$lng) {
-            return redirect()->back()->with('error', '❌ Location access is required to clock out.');
-        }
+        // 🔑 Super Admin / Bypass check
+        $isSuperAdmin = $user->hasRole('Super Admin') || $user->attendance_bypass;
 
-        $office = $this->getOfficeConfig();
-        $distance = $this->calculateDistance($lat, $lng, $office['lat'], $office['lng']);
+        if (!$isSuperAdmin) {
+            // 🛡️ Geofencing Enforcement for Clock Out
+            if (!$lat || !$lng) {
+                return redirect()->back()->with('error', '❌ Location access is required to clock out.');
+            }
 
-        if ($distance > $office['radius']) {
-            return redirect()->back()->with('error', sprintf('❌ Outside Office Boundary. You are %.2f meters away.', $distance));
-        }
+            $office   = $this->getOfficeConfig();
+            $distance = $this->calculateDistance($lat, $lng, $office['lat'], $office['lng']);
 
-        // 🛡️ IP Enforcement
-        if ($user->allowed_ip && $request->ip() !== $user->allowed_ip) {
-            return redirect()->back()->with('error', '❌ Attendance not allowed from this IP.');
+            if ($distance > $office['radius']) {
+                return redirect()->back()->with('error', sprintf('❌ Outside Office Boundary. You are %.2f meters away.', $distance));
+            }
+
+            // 🛡️ IP Enforcement
+            if ($user->allowed_ip && $request->ip() !== $user->allowed_ip) {
+                return redirect()->back()->with('error', '❌ Attendance not allowed from this IP.');
+            }
         }
 
         $attendance = Attendance::where('user_id', $user->id)->where('date', $date)->first();
 
         if ($attendance && !$attendance->clock_out) {
             $attendance->update([
-                'clock_out' => Carbon::now()->format('H:i:s'),
+                'clock_out'    => Carbon::now()->format('H:i:s'),
                 'clock_out_ip' => $request->ip(),
-                'out_lat' => $lat,
-                'out_lng' => $lng,
+                'out_lat'      => $lat,
+                'out_lng'      => $lng,
             ]);
         }
 
-        return redirect()->back()->with('success', '👋 Clocked out successfully from office boundary.');
+        return redirect()->back()->with('success', '👋 Clocked out successfully.');
     }
 
     /**
@@ -173,8 +187,9 @@ class AttendanceController extends Controller
     public function report(Request $request)
     {
         $user = $request->user();
-        $isPrivileged = $user->roles->whereIn('name', ['Super Admin', 'Admin', 'HR'])->count() > 0;
-
+        $isPrivileged = $user->hasPermissionTo('download reports') || 
+                        $user->roles->whereIn('name', ['Super Admin', 'Admin', 'HR', 'manager', 'team lead'])->count() > 0;
+                        
         if (!$isPrivileged) {
             abort(403, 'Unauthorized');
         }
@@ -182,10 +197,8 @@ class AttendanceController extends Controller
         $month = $request->month ?? now()->month;
         $year = $request->year ?? now()->year;
 
-        $employees = User::role('Employee')->get();
-        $reportData = [];
-
-        foreach ($employees as $employee) {
+        $employees = User::whereHas('roles', fn($q) => $q->where('name', 'Employee'))->paginate(3)->withQueryString();
+        $reportData = $employees->getCollection()->map(function ($employee) use ($month, $year) {
             $presentCount = Attendance::where('user_id', $employee->id)
                 ->whereMonth('date', $month)
                 ->whereYear('date', $year)
@@ -194,17 +207,19 @@ class AttendanceController extends Controller
 
             $totalWorkingDays = $this->holidayService->getWorkingDaysCount($month, $year);
 
-            $reportData[] = [
+            return [
                 'employee' => $employee->name,
                 'email' => $employee->email,
                 'present_days' => $presentCount,
                 'working_days' => $totalWorkingDays,
                 'absent_days' => max(0, $totalWorkingDays - $presentCount),
             ];
-        }
+        });
+
+        $employees->setCollection($reportData);
 
         return Inertia::render('Attendance/Report', [
-            'report' => $reportData,
+            'report' => $employees,
             'filters' => ['month' => (int) $month, 'year' => (int) $year],
         ]);
     }

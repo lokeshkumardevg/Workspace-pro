@@ -17,7 +17,7 @@ class AnnouncementController extends Controller
                     ->orWhere('expires_at', '>', now());
             })
             ->orderBy('id', 'desc')
-            ->get();
+            ->paginate(3);
 
         return Inertia::render('Announcements/Index', [
             'announcements' => $announcements
@@ -26,7 +26,7 @@ class AnnouncementController extends Controller
 
     public function store(Request $request)
     {
-        if (!auth()->user()->hasRole(['Super Admin', 'Admin', 'HR'])) {
+        if (!auth()->user()->hasPermissionTo('create announcements') && !auth()->user()->hasRole(['Super Admin', 'Admin', 'HR', 'manager', 'team lead', 'Manager', 'Team Lead', 'hr', 'admin', 'super admin'])) {
             abort(403);
         }
 
@@ -50,7 +50,7 @@ class AnnouncementController extends Controller
 
     public function destroy(Announcement $announcement)
     {
-        if (!auth()->user()->hasRole(['Super Admin', 'Admin', 'HR'])) {
+        if (!auth()->user()->hasPermissionTo('create announcements') && !auth()->user()->hasRole(['Super Admin', 'Admin', 'HR', 'manager', 'team lead', 'Manager', 'Team Lead', 'hr', 'admin', 'super admin'])) {
             abort(403);
         }
 

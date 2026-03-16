@@ -14,54 +14,60 @@ class RolesAndPermissionsSeeder extends Seeder
         // Reset cached roles and permissions
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // Create permissions
-        $permissions = [
-            'manage projects',
-            'manage tasks',
-            'view tasks',
-            'manage attendance',
-            'view attendance',
-            'manage leads',
-            'view leads',
-            'manage users',
-            'manage roles',
-            'manage leaves',
-            'view leaves',
-            'approve leaves',
-            'download reports',
+        // Create granular permissions for each module
+        $modules = [
+            'projects', 'tasks', 'attendance', 'leads', 'leaves', 
+            'users', 'roles', 'announcements', 'settings', 'holidays', 'payroll', 'analytics'
         ];
+        
+        $actions = ['view', 'create', 'edit', 'delete'];
+        $extraPermissions = ['approve leaves', 'download reports', 'manage system'];
 
-        foreach ($permissions as $perm) {
+        foreach ($modules as $module) {
+            foreach ($actions as $action) {
+                Permission::firstOrCreate(['name' => "$action $module"]);
+            }
+        }
+
+        foreach ($extraPermissions as $perm) {
             Permission::firstOrCreate(['name' => $perm]);
         }
 
-        // Employee: view only, submit leaves
+        // Employee: Basic access
         $employeeRole = Role::firstOrCreate(['name' => 'Employee']);
-        $employeeRole->syncPermissions(['view tasks', 'view attendance', 'view leads', 'view leaves', 'manage leaves']);
-
-        // Manager: approve/reject leaves
-        $managerRole = Role::firstOrCreate(['name' => 'Manager']);
-        $managerRole->syncPermissions(['view tasks', 'manage tasks', 'view attendance', 'view leads', 'view leaves', 'approve leaves']);
-
-        // HR: full attendance + leave reports download
-        $hrRole = Role::firstOrCreate(['name' => 'HR']);
-        $hrRole->syncPermissions(['view attendance', 'manage attendance', 'view leaves', 'manage leaves', 'approve leaves', 'download reports']);
-
-        // Admin
-        $adminRole = Role::firstOrCreate(['name' => 'Admin']);
-        $adminRole->syncPermissions([
-            'manage projects',
-            'manage tasks',
-            'view tasks',
-            'view attendance',
-            'manage leads',
-            'view leads',
-            'manage users',
-            'view leaves',
-            'manage leaves',
-            'approve leaves',
-            'download reports'
+        $employeeRole->syncPermissions([
+            'view tasks', 'view attendance', 'view leads', 'view leaves', 
+            'create leaves', 'edit leaves', 'view announcements'
         ]);
+
+        // team lead (lowercase as seen in DB)
+        $teamLeadRole = Role::firstOrCreate(['name' => 'team lead']);
+        $teamLeadRole->syncPermissions([
+            'view tasks', 'create tasks', 'edit tasks', 'view attendance',
+            'view leaves', 'view projects', 'view announcements'
+        ]);
+
+        // manager (lowercase as seen in DB)
+        $managerRole = Role::firstOrCreate(['name' => 'manager']);
+        $managerRole->syncPermissions([
+            'view tasks', 'create tasks', 'edit tasks', 'delete tasks',
+            'view attendance', 'manage attendance',
+            'view leads', 'create leads', 'edit leads',
+            'view leaves', 'approve leaves',
+            'view projects', 'create projects', 'edit projects', 'view announcements'
+        ]);
+
+        // HR
+        $hrRole = Role::firstOrCreate(['name' => 'HR']);
+        $hrRole->syncPermissions([
+            'view attendance', 'manage attendance', 'view leaves', 
+            'approve leaves', 'download reports', 'view users', 'view announcements'
+        ]);
+
+        // Admin: Almost everything
+        $adminRole = Role::firstOrCreate(['name' => 'Admin']);
+        $allPermissions = Permission::all()->pluck('name')->toArray();
+        $adminRole->syncPermissions($allPermissions);
 
         // Super Admin gets everything via Gate::before
         $superAdminRole = Role::firstOrCreate(['name' => 'Super Admin']);

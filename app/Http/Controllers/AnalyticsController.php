@@ -25,7 +25,7 @@ class AnalyticsController extends Controller
             ->get();
 
         // 2. Top Performers (Most completed tasks this month)
-        $topPerformers = User::role('Employee')
+        $topPerformers = User::whereHas('roles', fn($q) => $q->where('name', 'Employee'))
             ->withCount([
                 'tasks' => function ($q) {
                     $q->where('status', 'completed')

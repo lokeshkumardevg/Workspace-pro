@@ -11,6 +11,7 @@ const props = defineProps({
     users: Object,
     roles: Array,
     filters: Object,
+    isSuperAdmin: Boolean,
 });
 
 const search = ref(props.filters.search || '');
@@ -25,16 +26,30 @@ const editingUser = ref(null);
 const form = useForm({
     name: '',
     email: '',
+    designation: '',
+    employee_id: '',
+    department: '',
+    base_salary: 0,
     allowed_ip: '',
-    roles: []
+    attendance_bypass: false,
+    joining_date: '',
+    probation_months: 3,
+    role: ''
 });
 
 const openEditModal = (user) => {
     editingUser.value = user;
     form.name = user.name;
     form.email = user.email;
+    form.designation = user.designation || '';
+    form.employee_id = user.employee_id || '';
+    form.department = user.department || '';
+    form.base_salary = user.base_salary || 0;
     form.allowed_ip = user.allowed_ip || '';
-    form.roles = user.roles.map(r => r.name);
+    form.attendance_bypass = !!user.attendance_bypass;
+    form.joining_date = user.joining_date || '';
+    form.probation_months = user.probation_months ?? 3;
+    form.role = user.roles.length > 0 ? user.roles[0].name : '';
     showEditModal.value = true;
 };
 
@@ -45,16 +60,32 @@ const submitUpdate = () => {
         }
     });
 };
+
+const deleteUser = (user) => {
+    if (confirm(`Are you sure you want to delete user "${user.name}"?`)) {
+        router.delete(route('users.destroy', user.id), {
+            preserveScroll: true,
+        });
+    }
+};
+
+const formatCurrency = (n) => 
+    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n ?? 0);
 </script>
 
 <template>
-    <Head title="Users Management" />
+    <Head title="Users" />
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="text-2xl font-bold leading-tight text-gray-800">
-                User Management
-            </h2>
+            <div class="flex justify-between items-center w-full">
+                <h2 class="text-xl font-bold text-gray-800">
+                    Staff Management
+                </h2>
+                <span class="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg font-bold text-xs uppercase shadow-sm">
+                    {{ users.total }} Users Total
+                </span>
+            </div>
         </template>
 
         <div class="py-10">
@@ -62,114 +93,128 @@ const submitUpdate = () => {
                 
                 <DataTable 
                     :headers="[
-                        { key: 'name', label: 'User Details', sortable: true },
-                        { key: 'allowed_ip', label: 'Security (IP Mapping)' },
-                        { key: 'roles', label: 'Authority Roles' },
-                        { key: 'actions', label: 'Governance' }
+                        { key: 'name', label: 'Employee Name' },
+                        { key: 'allowed_ip', label: 'Security (IP/Bypass)' },
+                        { key: 'salary', label: 'Salary' },
+                        { key: 'role', label: 'Role' },
+                        { key: 'actions', label: 'Actions' }
                     ]"
                     :items="users.data"
-                    placeholder="Search by identity or contact email..."
+                    placeholder="Search users..."
                     @search="val => search = val"
                 >
                     <template #row="{ item: user }">
-                        <td class="px-6 py-6 whitespace-nowrap">
+                        <td class="px-6 py-4">
                             <div class="flex items-center">
-                                <div class="h-12 w-12 flex-shrink-0 relative">
-                                    <img class="h-12 w-12 rounded-[1.2rem] border-2 border-white shadow-md ring-1 ring-gray-100" :src="'https://ui-avatars.com/api/?name='+user.name+'&background=random'" alt="Avatar">
-                                    <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white shadow-sm"></div>
+                                <img class="h-10 w-10 rounded-full border border-gray-100 shadow-sm mr-3" 
+                                    :src="'https://ui-avatars.com/api/?name='+user.name+'&background=4f46e5&color=fff'" alt="Avatar">
+                                <div>
+                                    <div class="text-sm font-bold text-gray-900">{{ user.name }}</div>
+                                    <div class="text-[10px] text-gray-400 font-medium italic">
+                                        {{ user.designation || 'Staff' }} • #{{ user.employee_id || user.id }}
+                                    </div>
                                 </div>
-                                <div class="ml-4 text-left">
-                                    <div class="text-sm font-black text-gray-900 uppercase tracking-tight leading-none">{{ user.name }}</div>
-                                    <div class="text-[10px] text-gray-400 font-bold mt-1 uppercase tracking-widest">{{ user.email }}</div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex flex-col gap-1">
+                                <div class="text-[10px] font-medium" :class="user.allowed_ip ? 'text-indigo-600' : 'text-gray-400'">
+                                    IP: {{ user.allowed_ip || 'Any' }}
+                                </div>
+                                <div v-if="user.attendance_bypass" class="text-[9px] font-bold text-amber-600 uppercase tracking-tighter">
+                                    🔓 Location Bypass ON
                                 </div>
                             </div>
                         </td>
-                        <td class="px-6 py-6 whitespace-nowrap">
-                            <div v-if="user.allowed_ip" class="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-2xl">
-                                <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-                                <span class="font-mono text-[10px] font-black uppercase tracking-widest">{{ user.allowed_ip }}</span>
-                            </div>
-                            <span v-else class="text-[9px] font-black text-gray-300 uppercase tracking-[0.2em] italic">Open Integration (No IP)</span>
+                        <td class="px-6 py-4">
+                            <div class="text-xs font-bold text-gray-700">{{ formatCurrency(user.base_salary) }}</div>
                         </td>
-                        <td class="px-6 py-6">
-                            <div class="flex flex-wrap gap-1.5">
-                                <span v-for="role in user.roles" :key="role.id" class="inline-flex items-center px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-indigo-50 text-indigo-700 border border-indigo-100 shadow-sm">
-                                    {{ role.name }}
-                                </span>
-                                <span v-if="user.roles.length === 0" class="text-[8px] font-black text-gray-300 uppercase tracking-widest italic">No Access Assigned</span>
-                            </div>
+                        <td class="px-6 py-4">
+                            <span v-for="role in user.roles" :key="role.id" class="inline-flex px-2 py-1 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100 mr-1">
+                                {{ role.name }}
+                            </span>
+                            <span v-if="user.roles.length === 0" class="text-[10px] text-gray-300 italic">No Role</span>
                         </td>
-                        <td class="px-6 py-6 whitespace-nowrap text-right">
-                            <button @click="openEditModal(user)" class="inline-flex items-center gap-2 bg-gray-900 hover:bg-indigo-600 text-white px-5 py-2.5 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                                Configure Profile
-                            </button>
+                        <td class="px-6 py-4 text-right">
+                            <div class="flex items-center justify-end gap-2">
+                                <button @click="openEditModal(user)" class="bg-gray-800 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg text-xs font-bold transition-all active:scale-95">
+                                    Edit
+                                </button>
+                                <button v-if="isSuperAdmin && $page.props.auth.user.id !== user.id" @click="deleteUser(user)" class="bg-rose-50 hover:bg-rose-600 hover:text-white px-4 py-2 rounded-lg text-xs font-bold transition-all text-rose-700 border border-rose-100">
+                                    Delete
+                                </button>
+                            </div>
                         </td>
                     </template>
                 </DataTable>
 
-                <Pagination :links="users.links" class="mt-8" />
+                <div class="flex justify-end mt-6">
+                    <Pagination :links="users.links" />
+                </div>
             </div>
         </div>
 
-        <!-- Governance Modal (Edit) -->
-        <Modal :show="showEditModal" @close="showEditModal = false" title="Member Governance Profile" maxWidth="3xl">
-            <form @submit.prevent="submitUpdate" class="space-y-8">
-                <div class="flex items-center gap-6 p-8 bg-gray-50/50 rounded-[2.5rem] border border-gray-100 shadow-inner">
-                    <img class="h-20 w-20 rounded-[1.8rem] border-4 border-white shadow-xl" :src="'https://ui-avatars.com/api/?name='+editingUser?.name+'&background=random'" alt="Avatar">
+        <!-- Edit Profile Modal -->
+        <Modal :show="showEditModal" @close="showEditModal = false" title="Edit Staff Profile" maxWidth="3xl">
+            <form @submit.prevent="submitUpdate" class="p-6 space-y-6">
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <h4 class="text-2xl font-black text-gray-900 uppercase tracking-tighter">{{ editingUser?.name }}</h4>
-                        <div class="flex items-center gap-3 mt-1.5">
-                            <span class="text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">{{ editingUser?.email }}</span>
-                            <span class="h-1.5 w-1.5 bg-gray-200 rounded-full"></span>
-                            <span class="text-[10px] font-black text-indigo-600 uppercase tracking-widest">System Identifier: #{{ editingUser?.id }}</span>
-                        </div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2 ml-1">Full Name</label>
+                        <input v-model="form.name" type="text" class="w-full bg-gray-50 border-gray-200 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 text-sm py-3" required>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2 ml-1">Email Address</label>
+                        <input v-model="form.email" type="email" class="w-full bg-gray-50 border-gray-200 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 text-sm py-3" required>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
-                    <div class="space-y-8">
-                         <h5 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] flex items-center gap-3 ml-1">
-                            <span class="h-1.5 w-1.5 bg-indigo-600 rounded-full"></span> Core Identity
-                        </h5>
-                        <div>
-                            <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3 ml-2">Display Name</label>
-                            <input v-model="form.name" type="text" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-bold shadow-inner py-3.5" required>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3 ml-2">Authentication Email</label>
-                            <input v-model="form.email" type="email" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-bold shadow-inner py-3.5" required>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3 ml-2">Security Authorization (Allowed IP)</label>
-                            <input v-model="form.allowed_ip" type="text" placeholder="Quantum Safe IP, e.g. 192.168.1.1" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-bold shadow-inner py-3.5 font-mono">
-                            <p class="text-[9px] text-gray-400 font-bold mt-3 ml-2 uppercase leading-relaxed font-mono">Restricts clock-in functionality to specified IP network if defined.</p>
-                        </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2 ml-1">Employee ID</label>
+                        <input v-model="form.employee_id" type="text" class="w-full bg-gray-50 border-gray-200 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 text-sm py-3">
                     </div>
-
-                    <div class="space-y-6">
-                        <h5 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] flex items-center gap-3 ml-1">
-                            <span class="h-1.5 w-1.5 bg-indigo-600 rounded-full"></span> Privilege Hierarchy (Roles)
-                        </h5>
-                        <div class="max-h-[340px] overflow-y-auto space-y-3 pr-2 custom-scrollbar p-1">
-                            <label v-for="role in roles" :key="role.id" class="flex items-center justify-between px-6 py-4 rounded-[1.8rem] border border-gray-100 cursor-pointer transition-all duration-300" :class="form.roles.includes(role.name) ? 'bg-indigo-600 text-white border-indigo-600 shadow-xl shadow-indigo-100' : 'bg-white text-gray-600 hover:border-indigo-200 hover:bg-gray-50'">
-                                <span class="text-xs font-black uppercase tracking-widest">{{ role.name }}</span>
-                                <input type="checkbox" :value="role.name" v-model="form.roles" class="h-5 w-5 rounded-lg border-gray-300 text-gray-900 focus:ring-0 transition-all checked:bg-white checked:border-white">
-                            </label>
-                        </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2 ml-1">Designation</label>
+                        <input v-model="form.designation" type="text" class="w-full bg-gray-50 border-gray-200 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 text-sm py-3">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2 ml-1">Salary (₹)</label>
+                        <input v-model="form.base_salary" type="number" class="w-full bg-gray-50 border-gray-200 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 text-sm py-3">
                     </div>
                 </div>
 
-                <div class="flex items-center justify-end gap-4 pt-4 border-t border-gray-50">
-                    <button type="button" @click="showEditModal = false" class="px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-all active:scale-95">Abandon Changes</button>
-                    <button type="submit" :disabled="form.processing" class="px-12 py-3.5 bg-indigo-600 hover:bg-gray-950 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-200 active:scale-95">Commit Governance</button>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2 ml-1">Security Role</label>
+                        <select v-model="form.role" class="w-full bg-gray-50 border-gray-200 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 text-sm py-3">
+                            <option value="">Select Role</option>
+                            <option v-for="role in roles" :key="role.id" :value="role.name">{{ role.name }}</option>
+                        </select>
+                        <p class="text-[10px] text-gray-400 mt-1 italic">* Only one role can be assigned per staff.</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2 ml-1">Allowed IP Address</label>
+                        <input v-model="form.allowed_ip" type="text" placeholder="Leave empty for all IPs" class="w-full bg-gray-50 border-gray-200 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 text-sm py-3">
+                    </div>
+                </div>
+
+                <div v-if="isSuperAdmin" class="bg-gray-50 p-4 rounded-xl flex items-center justify-between border border-gray-100">
+                    <div>
+                        <p class="text-sm font-bold text-gray-800">Attendance Location Bypass</p>
+                        <p class="text-xs text-gray-500">Allow clock-in/out from any location (bypass GPS check)</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" v-model="form.attendance_bypass" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                    </label>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-4">
+                    <button type="button" @click="showEditModal = false" class="px-6 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100">Cancel</button>
+                    <button type="submit" :disabled="form.processing" class="px-8 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-100 transition-all active:scale-95">Save Changes</button>
                 </div>
             </form>
         </Modal>
     </AuthenticatedLayout>
 </template>
-
-<style scoped>
-.custom-scrollbar::-webkit-scrollbar { width: 4px; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 10px; }
-</style>

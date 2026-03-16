@@ -59,40 +59,40 @@ const markAllAsRead = () => {
                     <!-- Announcements -->
                     <NavLink :href="route('announcements.index')" :active="route().current('announcements.*')" class="w-full text-indigo-100 hover:bg-indigo-800 hover:text-white rounded-lg px-3 py-2.5 flex items-center gap-3 transition-colors">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z"/></svg>
-                        Broadcasting
+                        Announcements
                     </NavLink>
 
                     <!-- Projects -->
-                    <NavLink v-if="$page.props.auth.user.permissions.includes('manage projects') || $page.props.auth.user.roles.some(r => ['Super Admin', 'Admin', 'Manager', 'Team Lead', 'Leader'].includes(r))"
+                    <NavLink v-if="$page.props.auth.user.permissions.includes('view projects') || $page.props.auth.user.roles.some(r => ['Super Admin', 'Admin', 'Manager', 'Team Lead', 'manager', 'team lead'].includes(r))"
                         :href="route('projects.index')" :active="route().current('projects.index')" class="w-full text-indigo-100 hover:bg-indigo-800 hover:text-white rounded-lg px-3 py-2.5 flex items-center gap-3 transition-colors">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
                         Projects
                     </NavLink>
                     
                     <!-- Tasks -->
-                    <NavLink v-if="$page.props.auth.user.permissions.includes('view tasks') || $page.props.auth.user.roles.some(r => ['Super Admin', 'Admin', 'Manager', 'Team Lead', 'Leader'].includes(r))"
+                    <NavLink v-if="$page.props.auth.user.permissions.includes('view tasks') || $page.props.auth.user.roles.some(r => ['Super Admin', 'Admin', 'Manager', 'Team Lead', 'manager', 'team lead'].includes(r))"
                         :href="route('tasks.index')" :active="route().current('tasks.index')" 
                         class="w-full text-indigo-100 hover:bg-indigo-800 hover:text-white rounded-lg px-3 py-2.5 flex items-center gap-3 transition-colors">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
                         Tasks
                     </NavLink>
 
-                    <!-- Leads CRM -->
-                    <NavLink v-if="$page.props.auth.user.permissions.includes('view leads') || $page.props.auth.user.roles.some(r => ['Super Admin', 'Admin', 'Manager', 'Team Lead', 'Leader'].includes(r))"
+                    <!-- Leads -->
+                    <NavLink v-if="$page.props.auth.user.permissions.includes('view leads') || $page.props.auth.user.roles.some(r => ['Super Admin', 'Admin', 'Manager', 'Team Lead', 'manager', 'team lead'].includes(r))"
                         :href="route('leads.index')" :active="route().current('leads.index')" class="w-full text-indigo-100 hover:bg-indigo-800 hover:text-white rounded-lg px-3 py-2.5 flex items-center gap-3 transition-colors">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                        Leads CRM
+                        Leads
                     </NavLink>
 
-                    <!-- Analytics/Performance -->
-                    <NavLink v-if="$page.props.auth.user.permissions.includes('manage tasks') || $page.props.auth.user.roles.some(r => ['Super Admin', 'Admin', 'Manager', 'Team Lead', 'Leader'].includes(r))"
+                    <!-- Analytics -->
+                    <NavLink v-if="$page.props.auth.user.permissions.includes('manage tasks') || $page.props.auth.user.roles.some(r => ['Super Admin', 'Admin', 'Manager', 'Team Lead', 'manager', 'team lead'].includes(r))"
                         :href="route('analytics.index')" :active="route().current('analytics.*')" 
                         class="w-full text-indigo-100 hover:bg-indigo-800 hover:text-white rounded-lg px-3 py-2.5 flex items-center gap-3 transition-colors">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-                        Performance
+                        Analytics
                     </NavLink>
 
-                    <!-- Attendance (Submenu for HR/Admin) -->
+                    <!-- Attendance -->
                     <div v-if="$page.props.auth.user.permissions.includes('view attendance') || $page.props.auth.user.roles.includes('Super Admin')">
                         <button @click="showingAttendance = !showingAttendance"
                             class="w-full text-indigo-100 hover:bg-indigo-800 hover:text-white rounded-lg px-3 py-2.5 flex items-center justify-between transition-colors focus:outline-none">
@@ -105,12 +105,12 @@ const markAllAsRead = () => {
                         <div v-show="showingAttendance" class="mt-1 space-y-1 pl-10">
                             <NavLink :href="route('attendance.index')" :active="route().current('attendance.index')" class="w-full text-indigo-200 hover:text-white hover:bg-indigo-800 rounded-lg px-3 py-2 flex items-center text-sm transition-colors gap-2">
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
-                                Daily Logs
+                                Logs
                             </NavLink>
                             <NavLink v-if="$page.props.auth.user.permissions.includes('download reports') || $page.props.auth.user.roles.includes('Super Admin')"
                                      :href="route('attendance.report')" :active="route().current('attendance.report')" class="w-full text-indigo-200 hover:text-white hover:bg-indigo-800 rounded-lg px-3 py-2 flex items-center text-sm transition-colors gap-2">
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                                Monthly Reports
+                                Reports
                             </NavLink>
                         </div>
                     </div>
@@ -119,7 +119,7 @@ const markAllAsRead = () => {
                     <NavLink v-if="$page.props.auth.user.permissions.includes('view leaves') || $page.props.auth.user.permissions.includes('manage leaves') || $page.props.auth.user.roles.includes('Super Admin')"
                         :href="route('leaves.index')" :active="route().current('leaves.*')" class="w-full text-indigo-100 hover:bg-indigo-800 hover:text-white rounded-lg px-3 py-2.5 flex items-center gap-3 transition-colors">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                        Leave Management
+                        Leaves
                         <!-- Pending badge -->
                         <span v-if="$page.props.auth.user.permissions.includes('approve leaves') && $page.props.stats?.pending_leaves > 0"
                                class="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-pulse">
@@ -127,16 +127,29 @@ const markAllAsRead = () => {
                         </span>
                     </NavLink>
 
+                    <!-- Holiday Calendar -->
+                    <NavLink :href="route('holidays.index')" :active="route().current('holidays.*')" class="w-full text-indigo-100 hover:bg-indigo-800 hover:text-white rounded-lg px-3 py-2.5 flex items-center gap-3 transition-colors">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>
+                        Holidays
+                    </NavLink>
+
+                    <!-- Payroll -->
+                    <NavLink v-if="$page.props.auth.user.permissions.includes('manage payroll') || $page.props.auth.user.roles.some(r => ['Super Admin', 'Admin', 'HR', 'manager'].includes(r))"
+                        :href="route('payroll.index')" :active="route().current('payroll.*')" class="w-full text-indigo-100 hover:bg-indigo-800 hover:text-white rounded-lg px-3 py-2.5 flex items-center gap-3 transition-colors">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        Payroll
+                    </NavLink>
+
                     <!-- Divider -->
                     <div class="my-3 border-t border-indigo-800/60"></div>
 
-                    <!-- User Management Submenu -->
+                    <!-- Settings (Submenu) -->
                     <div v-if="$page.props.auth.user.permissions.includes('manage users') || $page.props.auth.user.roles.includes('Super Admin')">
                         <button @click="showingUserManagement = !showingUserManagement"
                             class="w-full text-indigo-100 hover:bg-indigo-800 hover:text-white rounded-lg px-3 py-2.5 flex items-center justify-between transition-colors focus:outline-none">
                             <div class="flex items-center gap-3">
                                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                                User Management
+                                Settings
                             </div>
                             <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': showingUserManagement }" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
@@ -147,8 +160,9 @@ const markAllAsRead = () => {
                             </NavLink>
                             <NavLink :href="route('roles.index')" :active="route().current('roles.*')" class="text-indigo-200 hover:text-white hover:bg-indigo-800 rounded-lg px-3 py-2 flex items-center text-sm transition-colors gap-2">
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-                                Roles & Permissions
+                                Roles
                             </NavLink>
+                           
                         </div>
                     </div>
 

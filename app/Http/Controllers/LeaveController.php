@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\LeaveRequest;
 use App\Models\User;
+use App\Models\SystemSetting;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Carbon\Carbon;
@@ -28,7 +29,8 @@ class LeaveController extends Controller
         }
 
         // Employees can only see their own
-        $isPrivileged = $user->roles->whereIn('name', ['Super Admin', 'Admin', 'HR', 'Manager'])->count() > 0;
+        $isPrivileged = $user->hasPermissionTo('view leaves') || 
+                        $user->roles->whereIn('name', ['Super Admin', 'Admin', 'HR', 'manager', 'team lead'])->count() > 0;
         if (!$isPrivileged) {
             $query->where('user_id', $user->id);
         }
@@ -52,6 +54,7 @@ class LeaveController extends Controller
 
     public function store(Request $request)
     {
+        $user = $request->user();
         $request->validate([
             'type' => 'required|in:sick,casual,earned,maternity,unpaid',
             'from_date' => 'required|date|after_or_equal:today',
@@ -63,27 +66,49 @@ class LeaveController extends Controller
         $to = Carbon::parse($request->to_date);
         $days = $from->diffInWeekdays($to) + 1;
 
+        // Logic for Paid/Unpaid Leave based on Probation
+        $isPaid = true;
+        if ($request->type === 'unpaid') {
+            $isPaid = false;
+        } else {
+            // Check if user is still in probation
+            $joiningDate = $user->joining_date ? Carbon::parse($user->joining_date) : $user->created_at;
+            $probationMonths = $user->probation_months ?? (int) SystemSetting::where('key', 'default_probation_months')->first()?->value ?? 3;
+            $probationEndDate = $joiningDate->copy()->addMonths($probationMonths);
+
+            if ($from->lessThan($probationEndDate)) {
+                $isPaid = false; // Within probation, leaves are unpaid unless specifically handled
+            }
+        }
+
         $leave = LeaveRequest::create([
-            'user_id' => $request->user()->id,
+            'user_id' => $user->id,
             'type' => $request->type,
             'from_date' => $request->from_date,
             'to_date' => $request->to_date,
             'days' => $days,
             'reason' => $request->reason,
             'status' => 'pending',
+            'is_paid' => $isPaid,
         ]);
 
-        // Notify Admins and HR
-        $reviewers = User::role(['Super Admin', 'Admin', 'HR', 'Manager'])->get();
+        // Notify Admins, HR and Managers
+        $reviewers = User::whereHas('roles', fn($q) => $q->whereIn('name', ['Super Admin', 'Admin', 'HR', 'manager', 'team lead']))->get();
         foreach ($reviewers as $reviewer) {
             $reviewer->notify(new \App\Notifications\LeaveRequestNotification($leave));
         }
 
-        return redirect()->back()->with('success', '✅ Leave request submitted successfully! Manager will review it shortly.');
+        $msg = $isPaid ? '✅ Leave request submitted successfully!' : 'ℹ️ Leave request submitted (Unpaid - Probation/Manual).';
+        return redirect()->back()->with('success', $msg);
     }
 
     public function review(Request $request, LeaveRequest $leave)
     {
+        $user = $request->user();
+        if (!$user->hasPermissionTo('approve leaves') && !$user->roles->whereIn('name', ['Super Admin', 'Admin', 'HR', 'manager'])->count()) {
+            abort(403);
+        }
+
         $request->validate([
             'action' => 'required|in:approved,rejected',
             'review_note' => 'nullable|string',
@@ -105,7 +130,8 @@ class LeaveController extends Controller
     public function downloadReport(Request $request)
     {
         $user = $request->user();
-        $isPrivileged = $user->roles->whereIn('name', ['Super Admin', 'Admin', 'HR'])->count() > 0;
+        $isPrivileged = $user->hasPermissionTo('download reports') || 
+                        $user->roles->whereIn('name', ['Super Admin', 'Admin', 'HR', 'manager', 'team lead'])->count() > 0;
 
         if (!$isPrivileged) {
             abort(403, 'Unauthorized');

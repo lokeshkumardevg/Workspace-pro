@@ -17,6 +17,7 @@ class LeaveRequest extends Model
         'days',
         'reason',
         'status',
+        'is_paid',
         'reviewed_by',
         'review_note'
     ];
@@ -24,6 +25,7 @@ class LeaveRequest extends Model
     protected $casts = [
         'from_date' => 'date',
         'to_date' => 'date',
+        'is_paid' => 'boolean',
     ];
 
     public function user()

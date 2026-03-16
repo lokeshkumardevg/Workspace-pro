@@ -33,68 +33,70 @@ const onSort = (key) => {
 </script>
 
 <template>
-    <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden transition-all hover:shadow-md">
+    <div class="bg-white rounded-[2.5rem] shadow-xl border border-gray-100 overflow-hidden transition-all hover:shadow-2xl">
         <!-- Table Toolbar -->
-        <div v-if="searchable" class="p-6 bg-white border-b border-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div class="relative w-full sm:w-96 group">
-                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <svg class="h-5 w-5 text-gray-400 group-focus-within:text-indigo-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
+        <div v-if="searchable" class="p-8 bg-white border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+            <div class="flex-1 max-w-xl">
+                <div class="relative group">
+                    <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                        <svg class="h-6 w-6 text-gray-300 group-focus-within:text-indigo-600 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                    <input 
+                        v-model="search" 
+                        @input="onSearch"
+                        type="text" 
+                        :placeholder="placeholder" 
+                        class="block w-full pl-14 pr-6 py-4 bg-gray-50 border-none rounded-3xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black transition-all shadow-inner"
+                    />
                 </div>
-                <input 
-                    v-model="search" 
-                    @input="onSearch"
-                    type="text" 
-                    :placeholder="placeholder" 
-                    class="block w-full pl-11 pr-4 py-3 bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-medium transition-all"
-                />
             </div>
             <slot name="actions"></slot>
         </div>
 
         <!-- Scrollable Container -->
-        <div class="overflow-x-auto relative min-h-[400px]">
+        <div class="overflow-x-auto relative min-h-[300px]">
             <table class="min-w-full divide-y divide-gray-100">
-                <thead class="bg-gray-50/50">
+                <thead class="bg-gray-50/80 backdrop-blur-sm sticky top-0 z-10">
                     <tr>
                         <th 
                             v-for="header in headers" 
                             :key="header.key"
                             @click="onSort(header.key)"
                             scope="col" 
-                            class="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]"
+                            class="px-8 py-6 text-left text-[10px] font-black text-gray-900 uppercase tracking-[0.25em]"
                             :class="{ 'cursor-pointer hover:text-indigo-600 transition-colors': header.sortable }"
                         >
-                            <div class="flex items-center gap-2">
+                            <div class="flex items-center gap-3">
                                 {{ header.label }}
-                                <svg v-if="header.sortable" class="w-3 h-3" :class="{ 'text-indigo-600': sortKey === header.key }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path v-if="sortKey === header.key && sortOrder === 'desc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
-                                    <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 15l7-7 7 7" />
+                                <svg v-if="header.sortable" class="w-4 h-4 opacity-30" :class="{ 'text-indigo-600 opacity-100': sortKey === header.key }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path v-if="sortKey === header.key && sortOrder === 'desc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" />
+                                    <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 15l7-7 7 7" />
                                 </svg>
                             </div>
                         </th>
                     </tr>
                 </thead>
-                <tbody class="bg-white divide-y divide-gray-50">
+                <tbody class="bg-white divide-y divide-gray-100">
                     <tr v-if="loading" v-for="i in 5" :key="i" class="animate-pulse">
-                        <td v-for="h in headers" :key="h.key" class="px-6 py-6">
-                            <div class="h-4 bg-gray-100 rounded-lg w-full"></div>
+                        <td v-for="h in headers" :key="h.key" class="px-8 py-8">
+                            <div class="h-5 bg-gray-100 rounded-2xl w-full opacity-50"></div>
                         </td>
                     </tr>
                     <template v-else>
-                        <tr v-for="(item, index) in items" :key="index" class="hover:bg-indigo-50/30 transition-all duration-200 group">
+                        <tr v-for="(item, index) in items" :key="index" class="hover:bg-indigo-50/40 transition-all duration-300 group">
                             <slot name="row" :item="item"></slot>
                         </tr>
                         <tr v-if="items.length === 0">
-                            <td :colspan="headers.length" class="px-6 py-24 text-center">
+                            <td :colspan="headers.length" class="px-8 py-32 text-center">
                                 <div class="flex flex-col items-center">
-                                    <div class="p-4 bg-gray-50 rounded-full mb-4">
-                                        <svg class="h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                    <div class="p-6 bg-gray-50 rounded-[2.5rem] mb-6 shadow-inner border border-gray-100">
+                                        <svg class="h-16 w-16 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                                         </svg>
                                     </div>
-                                    <p class="text-sm font-black text-gray-400 uppercase tracking-widest">Quantum silence: No records found</p>
+                                    <p class="text-xs font-black text-gray-400 uppercase tracking-widest font-sans">No records found</p>
                                 </div>
                             </td>
                         </tr>

@@ -66,10 +66,10 @@ const createProject = () => {
                         { key: 'name', label: 'Project Name', sortable: true },
                         { key: 'timeline', label: 'Timeline' },
                         { key: 'status', label: 'Status' },
-                        { key: 'actions', label: 'Actions / Insights' }
+                        { key: 'actions', label: 'Actions' }
                     ]"
                     :items="projects.data"
-                    placeholder="Search by name, client, or technology..."
+                    placeholder="Search projects..."
                     @search="val => search = val"
                 >
                     <template #actions>
@@ -138,29 +138,31 @@ const createProject = () => {
                     </template>
                 </DataTable>
 
-                <Pagination :links="projects.links" class="mt-8" />
+                <div class="flex justify-end pr-4">
+                    <Pagination :links="projects.links" />
+                </div>
             </div>
         </div>
 
-        <Modal :show="showCreateModal" @close="showCreateModal = false" title="Initialize New Venture" maxWidth="2xl">
+        <Modal :show="showCreateModal" @close="showCreateModal = false" title="Add New Project" maxWidth="2xl">
             <form @submit.prevent="createProject" class="space-y-8">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div class="md:col-span-2">
-                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Venture Integrity (Name)</label>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Project Name</label>
                         <input v-model="form.name" type="text" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-bold shadow-inner py-3.5 placeholder-gray-300" placeholder="e.g. Project Apollo..." required />
                     </div>
                     
                     <div class="md:col-span-2">
-                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Conceptual Blueprint (Description)</label>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Project Description</label>
                         <textarea v-model="form.description" rows="3" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-bold shadow-inner placeholder-gray-300" placeholder="Detailed vision for this project..."></textarea>
                     </div>
 
                     <div>
-                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Launch Sequence (Start)</label>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Start Date</label>
                         <input v-model="form.start_date" type="date" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-bold shadow-inner py-3.5" />
                     </div>
                     <div>
-                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Target Achievement (End)</label>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">End Date</label>
                         <input v-model="form.end_date" type="date" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-bold shadow-inner py-3.5" />
                     </div>
                 </div>
@@ -172,16 +174,16 @@ const createProject = () => {
                     </h4>
                     <div class="grid grid-cols-2 gap-6">
                         <div>
-                            <label class="block text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2 ml-1">Partner / Client</label>
+                            <label class="block text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2 ml-1">Client Name</label>
                             <input v-model="form.client_name" type="text" class="w-full bg-white border-transparent rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 text-xs font-bold shadow-sm" placeholder="Global Corp Ltd." />
                         </div>
                         <div>
-                            <label class="block text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2 ml-1">Investment Val.</label>
+                            <label class="block text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2 ml-1">Budget</label>
                             <input v-model="form.budget" type="number" step="0.01" class="w-full bg-white border-transparent rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 text-xs font-bold shadow-sm placeholder-mono" placeholder="50,000.00" />
                         </div>
                     </div>
                     <div>
-                        <label class="block text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2 ml-1">Technical Foundation (Stack)</label>
+                        <label class="block text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2 ml-1">Technology Stack</label>
                         <input v-model="form.technology_stack" type="text" class="w-full bg-white border-transparent rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 text-xs font-bold shadow-sm" placeholder="Laravel, Vue, AWS, AI Engine" />
                     </div>
                 </div>
