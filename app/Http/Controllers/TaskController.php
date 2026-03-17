@@ -17,7 +17,7 @@ class TaskController extends Controller
         $user = $request->user();
         // Check for specific roles or the 'manage tasks' permission
         $isPrivileged = $user->hasPermissionTo('view tasks') || 
-                        $user->roles->whereIn('name', ['Super Admin', 'Admin', 'HR', 'manager', 'team lead', 'Manager', 'Team Lead', 'employee', 'Employee', 'admin', 'super admin', 'hr'])->count() > 0;
+                        $user->roles->whereIn('name', ['Super Admin', 'Admin', 'HR', 'manager', 'team lead', 'Manager', 'Team Lead'])->count() > 0;
 
         $tasksQuery = Task::with('project', 'assignee', 'creator', 'comments.user');
 
@@ -29,15 +29,17 @@ class TaskController extends Controller
         // Date Filters
         $this->applyFilters($tasksQuery, $request);
 
-        // Security: Employees only see their own tasks
-        if (!$isPrivileged) {
-            $tasksQuery->where('assigned_to', $user->id);
-        }
+        // Security: Stricter Privacy - Everyone sees only their own tasks (assigned to them)
+        // OR tasks they created (to manage those they haven't assigned yet)
+        $tasksQuery->where(function($q) use ($user) {
+            $q->where('assigned_to', $user->id)
+              ->orWhere('created_by', $user->id);
+        });
 
         // Performance Calculation Logic
         $performanceData = $this->calculatePerformance($user, $request, $isPrivileged);
 
-        $tasks = $tasksQuery->orderBy('id', 'desc')->paginate(5)->withQueryString();
+        $tasks = $tasksQuery->orderBy('id', 'desc')->paginate(10)->withQueryString();
 
         $projects = Project::all();
         $users = User::whereHas('roles', fn($q) => $q->whereIn('name', ['Employee', 'Admin', 'Super Admin', 'manager', 'team lead', 'Manager', 'Team Lead', 'HR', 'employee', 'admin', 'super admin', 'hr']))->get();
@@ -55,7 +57,7 @@ class TaskController extends Controller
     public function export(Request $request)
     {
         $user = $request->user();
-        $isPrivileged = $user->roles->whereIn('name', ['Super Admin', 'Admin', 'HR', 'manager', 'team lead', 'Manager', 'Team Lead', 'employee', 'Employee', 'admin', 'super admin', 'hr', 'superadmin', 'Superadmin'])->count() > 0;
+        $isPrivileged = $user->roles->whereIn('name', ['Super Admin', 'Admin', 'HR', 'manager', 'team lead', 'Manager', 'Team Lead', 'admin', 'super admin', 'hr', 'superadmin', 'Superadmin'])->count() > 0;
 
         $tasksQuery = Task::with('project', 'assignee', 'creator');
         $this->applyFilters($tasksQuery, $request);
@@ -263,18 +265,18 @@ class TaskController extends Controller
     {
         $user = $request->user();
         $isPrivileged = $user->hasPermissionTo('create tasks') || 
-                        $user->roles->whereIn('name', ['Super Admin', 'Admin', 'HR', 'manager', 'team lead', 'Manager', 'Team Lead', 'admin', 'super admin', 'hr', 'manager', 'team lead'])->count() > 0;
+                        $user->roles->whereIn('name', ['Super Admin', 'Admin', 'HR', 'manager', 'team lead', 'Manager', 'Team Lead'])->count() > 0;
 
         $request->validate([
             'project_id' => 'required|exists:projects,id',
-            'assigned_to' => 'required|exists:users,id',
+            'assigned_to' => 'nullable|exists:users,id',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'due_date' => 'nullable|date',
             'priority' => 'required|in:low,medium,high,urgent',
         ]);
 
-        // Security: If not privileged, can only assign to self
+        // Security: If not privileged, ALWAYS force assignment to self
         $assignedTo = $request->assigned_to;
         if (!$isPrivileged) {
             $assignedTo = $user->id;
@@ -288,16 +290,56 @@ class TaskController extends Controller
             'due_date' => $request->due_date,
             'status' => 'pending',
             'priority' => $request->priority,
-            'created_by' => $request->user()->id,
+            'created_by' => $user->id,
         ]);
 
         // Notify Assignee
-        $assignee = User::find($request->assigned_to);
-        if ($assignee) {
-            $assignee->notify(new \App\Notifications\TaskAssignedNotification($task));
+        if ($assignedTo) {
+            $assignee = User::find($assignedTo);
+            if ($assignee) {
+                $assignee->notify(new \App\Notifications\TaskAssignedNotification($task));
+            }
         }
 
-        return redirect()->back()->with('success', '✅ Task assigned and performance tracking updated.');
+        return redirect()->back()->with('success', '✅ Task created successfully.');
+    }
+
+    public function update(Request $request, Task $task)
+    {
+        $user = $request->user();
+        
+        // Only creator can edit
+        if ($task->created_by !== $user->id) {
+            abort(403, 'Only the creator can edit this task.');
+        }
+
+        $isPrivileged = $user->hasPermissionTo('edit tasks') || 
+                        $user->roles->whereIn('name', ['Super Admin', 'Admin', 'HR', 'manager', 'team lead', 'Manager', 'Team Lead'])->count() > 0;
+
+        $request->validate([
+            'project_id' => 'required|exists:projects,id',
+            'assigned_to' => 'nullable|exists:users,id',
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'due_date' => 'nullable|date',
+            'priority' => 'required|in:low,medium,high,urgent',
+        ]);
+
+        $assignedTo = $request->assigned_to;
+        if (!$isPrivileged) {
+            $assignedTo = $user->id;
+        }
+
+        $task->update([
+            'project_id' => $request->project_id,
+            'assigned_to' => $assignedTo,
+            'title' => $request->title,
+            'description' => $request->description,
+            'due_date' => $request->due_date,
+            'priority' => $request->priority,
+        ]);
+
+        return redirect()->back()->with('success', '✅ Task updated successfully.');
     }
 
     public function updateStatus(Request $request, Task $task)

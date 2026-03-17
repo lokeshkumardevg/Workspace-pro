@@ -18,6 +18,8 @@ const props = defineProps({
 
 const page = usePage();
 
+const isPrivileged = ref(page.props.auth.user.roles.some(r => ['Super Admin', 'Admin', 'HR', 'manager', 'team lead', 'Manager', 'Team Lead'].includes(r)));
+
 const filter = reactive({
     search: props.filters?.search || '',
     filter_type: props.filters?.filter_type || 'all',
@@ -52,7 +54,7 @@ const exportTasks = (format = 'excel') => {
 const showCreateModal = ref(false);
 const form = useForm({
     project_id: '',
-    assigned_to: page.props.auth?.user?.id || '',
+    assigned_to: '',
     title: '',
     description: '',
     due_date: '',
@@ -65,6 +67,55 @@ const createTask = () => {
             showCreateModal.value = false;
             form.reset();
         }
+    });
+};
+
+// Edit Task Modal
+const showEditModal = ref(false);
+const editForm = useForm({
+    project_id: '',
+    assigned_to: '',
+    title: '',
+    description: '',
+    due_date: '',
+    priority: 'medium',
+});
+
+const openEditModal = (task) => {
+    selectedTask.value = task;
+    editForm.project_id = task.project_id;
+    editForm.assigned_to = task.assigned_to || '';
+    editForm.title = task.title;
+    editForm.description = task.description || '';
+    editForm.due_date = task.due_date ? task.due_date.slice(0, 16) : ''; // Format for datetime-local
+    editForm.priority = task.priority;
+    showEditModal.value = true;
+};
+
+const updateTask = () => {
+    editForm.put(route('tasks.update', selectedTask.value.id), {
+        onSuccess: () => {
+            showEditModal.value = false;
+        }
+    });
+};
+
+// Quick Add Task
+const quickAddForm = useForm({
+    title: '',
+    project_id: props.projects.length > 0 ? props.projects[0].id : '',
+    assigned_to: '',
+    priority: 'medium',
+});
+
+const quickAddTask = () => {
+    if (!quickAddForm.title.trim()) return;
+    
+    quickAddForm.post(route('tasks.store'), {
+        onSuccess: () => {
+            quickAddForm.title = '';
+        },
+        preserveScroll: true,
     });
 };
 
@@ -138,6 +189,19 @@ const formatDate = (d) => {
     if (!d) return '—';
     const date = new Date(d);
     return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+
+const formatDateTime = (d) => {
+    if (!d) return '—';
+    const date = new Date(d);
+    return date.toLocaleString('en-IN', { 
+        day: '2-digit', 
+        month: 'short', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+    });
 };
 </script>
 
@@ -225,9 +289,43 @@ const formatDate = (d) => {
                     </div>
                 </div>
 
+                <!-- Quick Add Task Bar -->
+                <div class="bg-indigo-50 border-2 border-indigo-100 rounded-3xl p-4 shadow-sm flex flex-col md:flex-row gap-4 items-center">
+                    <div class="flex-1 w-full">
+                        <input 
+                            v-model="quickAddForm.title" 
+                            @keyup.enter="quickAddTask" 
+                            type="text" 
+                            placeholder="⚡ Quick Add Task: Type task name and press Enter..." 
+                            class="w-full px-6 py-3 bg-white border-2 border-indigo-100 rounded-[1.2rem] focus:ring-4 focus:ring-indigo-200 focus:border-indigo-400 text-sm font-black placeholder-gray-400 transition-all shadow-md group-hover:shadow-lg" 
+                            :disabled="quickAddForm.processing"
+                        />
+                    </div>
+                    <div class="flex flex-wrap gap-2 w-full md:w-auto">
+                        <select v-model="quickAddForm.project_id" class="flex-1 md:w-40 px-4 py-3 bg-white border-2 border-indigo-100 rounded-[1.2rem] text-[10px] font-black uppercase tracking-tight focus:ring-4 focus:ring-indigo-100 transition-all shadow-md">
+                            <option value="" disabled>Project</option>
+                            <option v-for="proj in projects" :key="proj.id" :value="proj.id">{{ proj.name }}</option>
+                        </select>
+                        <select v-if="isPrivileged" 
+                                v-model="quickAddForm.assigned_to" 
+                                class="flex-1 md:w-40 px-4 py-3 bg-white border-2 border-indigo-100 rounded-[1.2rem] text-[10px] font-black uppercase tracking-tight focus:ring-4 focus:ring-indigo-100 transition-all shadow-md">
+                            <option value="" disabled>Assign To</option>
+                            <option v-for="u in users" :key="u.id" :value="u.id">{{ u.id === $page.props.auth.user.id ? 'Myself' : u.name }}</option>
+                        </select>
+                        <button 
+                            @click="quickAddTask" 
+                            :disabled="quickAddForm.processing"
+                            class="bg-indigo-600 hover:bg-gray-900 text-white px-8 py-3 rounded-[1.2rem] font-black uppercase text-[10px] shadow-lg transition-all active:scale-95 whitespace-nowrap"
+                        >
+                            {{ quickAddForm.processing ? 'Adding...' : 'Add' }}
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Enhanced Operational DataTable -->
                 <DataTable 
                     :headers="[
+                        { key: 'status_check', label: 'Tick', width: '50px' },
                         { key: 'title', label: 'Task Name', sortable: true },
                         { key: 'project', label: 'Project' },
                         { key: 'assignee', label: 'Assigned To' },
@@ -239,14 +337,29 @@ const formatDate = (d) => {
                     @search="val => filter.search = val"
                 >
                     <template #row="{ item: task }">
+                        <td class="px-6 py-6 w-[50px]">
+                            <button @click="updateStatus(task.id, task.status === 'completed' ? 'pending' : 'completed')" 
+                                    class="h-8 w-8 rounded-xl border-2 flex items-center justify-center transition-all active:scale-90"
+                                    :class="task.status === 'completed' ? 'bg-emerald-500 border-emerald-600 text-white shadow-emerald-200' : 'bg-white border-gray-200 text-gray-200 hover:border-emerald-300 hover:text-emerald-300'">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                            </button>
+                        </td>
                         <td class="px-6 py-6">
                             <div class="flex items-start gap-4">
                                 <div class="mt-1 h-3.5 w-3.5 rounded-full flex-shrink-0 border-2 border-white shadow-sm ring-1 ring-gray-100" :class="task.status === 'completed' ? 'bg-emerald-500' : (task.status === 'in_progress' ? 'bg-indigo-500' : 'bg-amber-400')"></div>
                                 <div class="min-w-0">
-                                    <button @click="openCommunication(task)" class="text-sm font-black text-gray-900 hover:text-indigo-600 transition-colors flex items-center gap-2 uppercase tracking-tight text-left">
-                                        {{ task.title }}
-                                        <span class="text-[9px] bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded-lg border border-gray-200">ID:{{ task.id }}</span>
-                                    </button>
+                                    <div class="flex items-center gap-2">
+                                        <button @click="openCommunication(task)" class="text-sm font-black text-gray-900 hover:text-indigo-600 transition-colors flex items-center gap-2 uppercase tracking-tight text-left">
+                                            {{ task.title }}
+                                            <span class="text-[9px] bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded-lg border border-gray-200">ID:{{ task.id }}</span>
+                                        </button>
+                                        <!-- Edit Action (Only for creator) -->
+                                        <button v-if="task.created_by === $page.props.auth.user.id" 
+                                                @click="openEditModal(task)" 
+                                                class="p-1 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-indigo-600 transition-all">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                        </button>
+                                    </div>
                                     <div class="flex items-center gap-2 mt-1.5">
                                         <span v-if="task.priority" class="text-[8px] font-black uppercase px-2 py-0.5 rounded-md border shadow-sm"
                                               :class="{
@@ -259,7 +372,7 @@ const formatDate = (d) => {
                                         </span>
                                         <div v-if="task.due_date" class="text-[9px] text-rose-500 font-black flex items-center gap-1 uppercase tracking-widest pl-2 border-l border-gray-200">
                                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                            Deadline: {{ formatDate(task.due_date) }}
+                                            Deadline: {{ formatDateTime(task.due_date) }}
                                         </div>
                                     </div>
                                     <p class="text-[10px] text-gray-400 mt-2 font-bold italic line-clamp-1 opacity-60 uppercase tracking-tighter" v-if="task.description">{{ task.description }}</p>
@@ -405,10 +518,10 @@ const formatDate = (d) => {
                             <option v-for="proj in projects" :key="proj.id" :value="proj.id">{{ proj.name }}</option>
                         </select>
                     </div>
-                    <div>
+                    <div v-if="isPrivileged">
                         <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Assign To</label>
-                        <select v-model="form.assigned_to" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner py-3.5" :disabled="!$page.props.auth.user.roles.some(r => ['Super Admin', 'Admin', 'manager', 'team lead', 'Manager', 'Team Lead'].includes(r))" required>
-                            <option value="" disabled>Select Employee</option>
+                        <select v-model="form.assigned_to" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner py-3.5">
+                            <option value="">Unassigned (Open Pool)</option>
                             <option v-for="u in users" :key="u.id" :value="u.id">{{ u.id === $page.props.auth.user.id ? 'Myself' : u.name }}</option>
                         </select>
                     </div>
@@ -421,8 +534,8 @@ const formatDate = (d) => {
                         <textarea v-model="form.description" rows="4" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner placeholder-gray-300" placeholder="Enter task details..."></textarea>
                     </div>
                     <div>
-                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Due Date</label>
-                        <input v-model="form.due_date" type="date" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-bold shadow-inner py-3.5" />
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Due Date & Time</label>
+                        <input v-model="form.due_date" type="datetime-local" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-bold shadow-inner py-3.5" />
                     </div>
                     <div>
                         <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Priority</label>
@@ -438,6 +551,54 @@ const formatDate = (d) => {
                 <div class="flex items-center justify-end gap-4 pt-4">
                     <button type="button" @click="showCreateModal = false" class="px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-all active:scale-95">Cancel</button>
                     <button type="submit" :disabled="form.processing" class="px-12 py-3.5 bg-indigo-600 hover:bg-gray-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-100 active:scale-95">Save Task</button>
+                </div>
+            </form>
+        </Modal>
+
+        <!-- Edit Task Modal -->
+        <Modal :show="showEditModal" @close="showEditModal = false" title="Edit Task" maxWidth="2xl">
+            <form @submit.prevent="updateTask" class="space-y-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Select Project</label>
+                        <select v-model="editForm.project_id" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner py-3.5" required>
+                            <option value="" disabled>Select Project</option>
+                            <option v-for="proj in projects" :key="proj.id" :value="proj.id">{{ proj.name }}</option>
+                        </select>
+                    </div>
+                    <div v-if="isPrivileged">
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Assign To</label>
+                        <select v-model="editForm.assigned_to" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner py-3.5">
+                            <option value="">Unassigned (Open Pool)</option>
+                            <option v-for="u in users" :key="u.id" :value="u.id">{{ u.name }}</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Task Title</label>
+                        <input v-model="editForm.title" type="text" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner py-3.5" required />
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Description</label>
+                        <textarea v-model="editForm.description" rows="4" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner placeholder-gray-300"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Due Date & Time</label>
+                        <input v-model="editForm.due_date" type="datetime-local" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-bold shadow-inner py-3.5" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Priority</label>
+                        <select v-model="editForm.priority" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner py-3.5" required>
+                            <option value="low">🟢 Low</option>
+                            <option value="medium">🟡 Medium</option>
+                            <option value="high">🟠 High</option>
+                            <option value="urgent">🔴 Urgent</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-4 pt-4">
+                    <button type="button" @click="showEditModal = false" class="px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-all active:scale-95">Cancel</button>
+                    <button type="submit" :disabled="editForm.processing" class="px-12 py-3.5 bg-indigo-600 hover:bg-gray-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-100 active:scale-95">Update Task</button>
                 </div>
             </form>
         </Modal>
