@@ -13,19 +13,9 @@ class HolidayService
      */
     public function isHoliday(Carbon $date): bool
     {
-        // 1. Check Sundays (all Sundays are holidays)
-        if ($date->isSunday()) {
+        // 1. Every Saturday and Sunday is off
+        if ($date->isSaturday() || $date->isSunday()) {
             return true;
-        }
-
-        // 2. Check 2nd and 4th Saturdays
-        if ($date->isSaturday()) {
-            $dayOfMonth = $date->day;
-            // 2nd Saturday: 8th to 14th
-            // 4th Saturday: 22nd to 28th
-            if (($dayOfMonth >= 8 && $dayOfMonth <= 14) || ($dayOfMonth >= 22 && $dayOfMonth <= 28)) {
-                return true;
-            }
         }
 
         // 3. Check official holidays table

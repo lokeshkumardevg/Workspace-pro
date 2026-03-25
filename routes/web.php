@@ -100,7 +100,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/attendance/clock-in', [\App\Http\Controllers\AttendanceController::class, 'clockIn'])->name('attendance.clock-in');
     Route::post('/attendance/clock-out', [\App\Http\Controllers\AttendanceController::class, 'clockOut'])->name('attendance.clock-out');
     Route::get('/attendance/export', [\App\Http\Controllers\AttendanceController::class, 'export'])->name('attendance.export');
+    Route::get('/attendance/calendar', [\App\Http\Controllers\AttendanceController::class, 'calendar'])->name('attendance.calendar');
+    Route::post('/attendance', [\App\Http\Controllers\AttendanceController::class, 'store'])->name('attendance.store');
     Route::get('/attendance/report', [\App\Http\Controllers\AttendanceController::class, 'report'])->name('attendance.report');
+    Route::put('/attendance/{attendance}', [\App\Http\Controllers\AttendanceController::class, 'update'])->name('attendance.update');
+    Route::delete('/attendance/{attendance}', [\App\Http\Controllers\AttendanceController::class, 'destroy'])->name('attendance.destroy');
+    Route::post('/attendance/import', [\App\Http\Controllers\AttendanceController::class, 'import'])->name('attendance.import');
 
     // Leads (CRM)
     Route::get('/leads', [\App\Http\Controllers\LeadController::class, 'index'])->name('leads.index');

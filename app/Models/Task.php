@@ -17,7 +17,10 @@ class Task extends Model
         'due_date',
         'status',
         'priority',
-        'created_by'
+        'created_by',
+        'time_spent',
+        'started_at',
+        'completed_at'
     ];
 
     public function project()

@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\HolidayService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class AttendanceController extends Controller
@@ -85,11 +86,18 @@ class AttendanceController extends Controller
     public function clockIn(Request $request)
     {
         $user = $request->user();
+        $isSuperAdmin = $user->hasRole('Super Admin') || $user->attendance_bypass;
+
+        // 🚫 Block Mobile Devices (Exempting Super Admin)
+        if (!$isSuperAdmin) {
+            $userAgent = $request->header('User-Agent');
+            if (preg_match('/Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i', $userAgent)) {
+                return redirect()->back()->with('error', '❌ Attendance is NOT allowed from mobile devices. Please use a Desktop or Laptop.');
+            }
+        }
+
         $lat = $request->lat;
         $lng = $request->lng;
-
-        // 🔑 Super Admin / Bypass check
-        $isSuperAdmin = $user->hasRole('Super Admin') || $user->attendance_bypass;
 
         if (!$isSuperAdmin) {
             // 🛡️ Geofencing Enforcement
@@ -141,12 +149,19 @@ class AttendanceController extends Controller
     public function clockOut(Request $request)
     {
         $user = $request->user();
+        $isSuperAdmin = $user->hasRole('Super Admin') || $user->attendance_bypass;
+
+        // 🚫 Block Mobile Devices (Exempting Super Admin)
+        if (!$isSuperAdmin) {
+            $userAgent = $request->header('User-Agent');
+            if (preg_match('/Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i', $userAgent)) {
+                return redirect()->back()->with('error', '❌ Attendance is NOT allowed from mobile devices. Please use a Desktop or Laptop.');
+            }
+        }
+
         $lat = $request->lat;
         $lng = $request->lng;
         $date = Carbon::today();
-
-        // 🔑 Super Admin / Bypass check
-        $isSuperAdmin = $user->hasRole('Super Admin') || $user->attendance_bypass;
 
         if (!$isSuperAdmin) {
             // 🛡️ Geofencing Enforcement for Clock Out
@@ -181,6 +196,192 @@ class AttendanceController extends Controller
         return redirect()->back()->with('success', '👋 Clocked out successfully.');
     }
 
+    public function update(Request $request, Attendance $attendance)
+    {
+        $user = $request->user();
+        $isSuperAdmin = $user->hasRole('Super Admin');
+
+        if (!$isSuperAdmin) {
+            abort(403, 'Only Super Admin can edit attendance.');
+        }
+
+        $request->validate([
+            'clock_in' => 'nullable|date_format:H:i:s',
+            'clock_out' => 'nullable|date_format:H:i:s',
+            'status' => 'required|in:present,absent,late,half_day',
+            'date' => 'required|date'
+        ]);
+
+        $attendance->update($request->only(['clock_in', 'clock_out', 'status', 'date']));
+
+        return redirect()->back()->with('success', '✅ Attendance record updated successfully.');
+    }
+
+    public function store(Request $request)
+    {
+        $user = $request->user();
+        if (!$user->hasRole('Super Admin')) {
+            abort(403);
+        }
+
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'date' => 'required|date',
+            'clock_in' => 'nullable|string',
+            'clock_out' => 'nullable|string',
+            'status' => 'required|in:present,absent,late,half_day,half-day'
+        ]);
+
+        Attendance::updateOrCreate(
+            ['user_id' => $request->user_id, 'date' => $request->date],
+            [
+                'clock_in' => $request->clock_in,
+                'clock_out' => $request->clock_out,
+                'status' => $request->status
+            ]
+        );
+
+        return redirect()->back()->with('success', '✅ Attendance record saved successfully.');
+    }
+
+    public function destroy(Attendance $attendance)
+    {
+        $user = auth()->user();
+        if (!$user->hasRole('Super Admin')) {
+            abort(403);
+        }
+
+        $attendance->delete();
+
+        return redirect()->back()->with('success', '🗑️ Attendance record deleted successfully.');
+    }
+
+    public function export(Request $request)
+    {
+        $user = $request->user();
+        if (!$user->hasRole('Super Admin')) {
+            abort(403);
+        }
+
+        $headers = [
+            "Content-type" => "text/csv",
+            "Content-Disposition" => "attachment; filename=attendance_export_" . date('Y-m-d') . ".csv",
+            "Pragma" => "no-cache",
+            "Cache-Control" => "must-revalidate, post-check=0, pre-check=0",
+            "Expires" => "0"
+        ];
+
+        $callback = function () {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, ['ID', 'Employee Email', 'Employee Name', 'Date', 'Clock In', 'Clock Out', 'Status']);
+
+            $attendances = Attendance::with('user')->orderBy('date', 'desc')->get();
+            foreach ($attendances as $row) {
+                fputcsv($file, [
+                    $row->id,
+                    $row->user->email,
+                    $row->user->name,
+                    $row->date,
+                    $row->clock_in,
+                    $row->clock_out,
+                    $row->status
+                ]);
+            }
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    public function import(Request $request)
+    {
+        $user = $request->user();
+        if (!$user->hasRole('Super Admin')) {
+            abort(403);
+        }
+
+        $request->validate([
+            'file' => 'required|file|mimes:csv,txt|max:2048'
+        ]);
+
+        $file = $request->file('file');
+        $handle = fopen($file->getRealPath(), "r");
+        
+        // Skip header
+        fgetcsv($handle);
+
+        $count = 0;
+        \DB::transaction(function() use ($handle, &$count) {
+            while (($data = fgetcsv($handle)) !== FALSE) {
+                $email = $data[1] ?? null;
+                $date = $data[3] ?? null;
+                $clock_in = $data[4] ?? null;
+                $clock_out = $data[5] ?? null;
+                $status = $data[6] ?? 'present';
+
+                if ($email && $date) {
+                    $employee = User::where('email', $email)->first();
+                    if ($employee) {
+                        Attendance::updateOrCreate(
+                            ['user_id' => $employee->id, 'date' => $date],
+                            [
+                                'clock_in' => !empty($clock_in) ? $clock_in : null,
+                                'clock_out' => !empty($clock_out) ? $clock_out : null,
+                                'status' => $status
+                            ]
+                        );
+                        $count++;
+                    }
+                }
+            }
+        });
+        
+        fclose($handle);
+
+        return redirect()->back()->with('success', "✅ Successfully imported $count attendance records.");
+    }
+
+    /**
+     * Calendar View for Employee
+     */
+    public function calendar(Request $request)
+    {
+        $user = $request->user();
+        $isSuperAdmin = $user->hasAnyRole(['Super Admin', 'Admin', 'HR', 'Manager', 'Team Lead', 'manager', 'team lead']) || $user->can('view attendance');
+        
+        $employee_id = $request->input('employee_id', $user->id);
+        if (!$isSuperAdmin && $employee_id != $user->id) {
+            abort(403);
+        }
+
+        $month = (int) $request->input('month', now()->month);
+        $year = (int) $request->input('year', now()->year);
+
+        $attendanceData = Attendance::where('user_id', $employee_id)
+            ->whereMonth('date', $month)
+            ->whereYear('date', $year)
+            ->get()
+            ->keyBy('date');
+
+        // Extract Holidays for calendar
+        $holidays = \App\Models\Holiday::whereMonth('date', $month)
+            ->whereYear('date', $year)
+            ->pluck('date')
+            ->toArray();
+
+        // Always send employees list so dropown always works
+        $employees = User::orderBy('name')->get(['id', 'name']);
+
+        return Inertia::render('Attendance/Calendar', [
+            'attendanceData' => $attendanceData,
+            'month' => $month,
+            'year' => $year,
+            'holidays' => $holidays,
+            'employees' => $employees,
+            'selectedEmployeeId' => (int) $employee_id
+        ]);
+    }
+
     /**
      * Report for HR
      */
@@ -199,20 +400,64 @@ class AttendanceController extends Controller
 
         $employees = User::whereHas('roles', fn($q) => $q->where('name', 'Employee'))->paginate(3)->withQueryString();
         $reportData = $employees->getCollection()->map(function ($employee) use ($month, $year) {
-            $presentCount = Attendance::where('user_id', $employee->id)
+            $startDate = Carbon::createFromDate($year, $month, 1);
+            $endDate = $startDate->copy()->endOfMonth();
+            
+            $presentDays = [];
+            $absentDays = [];
+            
+            // Get all attendance for the month
+            $monthAttendance = Attendance::where('user_id', $employee->id)
                 ->whereMonth('date', $month)
                 ->whereYear('date', $year)
-                ->where('status', 'present')
-                ->count();
+                ->get()
+                ->keyBy('date');
 
-            $totalWorkingDays = $this->holidayService->getWorkingDaysCount($month, $year);
+            $totalWorkingDays = 0;
+            $actuallyPresent = 0;
+
+            for ($date = $startDate->copy(); $date <= $endDate; $date->addDay()) {
+                $dateStr = $date->toDateString();
+                $isHoliday = $this->holidayService->isHoliday($date);
+                $isWeekend = $date->isSaturday() || $date->isSunday();
+                
+                if (!$isHoliday) {
+                    $totalWorkingDays++;
+                    if (isset($monthAttendance[$dateStr]) && $monthAttendance[$dateStr]->status === 'present') {
+                        $actuallyPresent++;
+                    }
+                } else {
+                    // It's a holiday/weekend. Check Sandwich Rule.
+                    if ($isWeekend) {
+                        // Check previous Friday (or last working day) and next Monday (or next working day)
+                        $friday = $date->copy()->previous(Carbon::FRIDAY);
+                        $monday = $date->copy()->next(Carbon::MONDAY);
+                        
+                        $frAttendance = $monthAttendance[$friday->toDateString()] ?? null;
+                        $moAttendance = $monthAttendance[$monday->toDateString()] ?? null;
+                        
+                        // Sandwich Rule: If both Friday and Monday are NOT 'present', this weekend is ABSENT.
+                        // Otherwise, weekends are generally 'present' (Paid Off).
+                        if ($frAttendance && $frAttendance->status !== 'present' && $moAttendance && $moAttendance->status !== 'present') {
+                            // Sandwich caught! Don't add to present count.
+                        } else {
+                            $actuallyPresent++; // Paid weekend
+                        }
+                        $totalWorkingDays++; // Paid weekends count towards total month days in some systems, or stay as is.
+                    } else {
+                        // Official Holiday (Festivals etc) - counts as Present
+                        $actuallyPresent++;
+                        $totalWorkingDays++;
+                    }
+                }
+            }
 
             return [
                 'employee' => $employee->name,
                 'email' => $employee->email,
-                'present_days' => $presentCount,
+                'present_days' => $actuallyPresent,
                 'working_days' => $totalWorkingDays,
-                'absent_days' => max(0, $totalWorkingDays - $presentCount),
+                'absent_days' => max(0, $totalWorkingDays - $actuallyPresent),
             ];
         });
 

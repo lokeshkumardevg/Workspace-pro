@@ -2,8 +2,9 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Pagination from '@/Components/Pagination.vue';
 import DataTable from '@/Components/DataTable.vue';
-import { Head, router } from '@inertiajs/vue3';
-import { ref, watch, onMounted } from 'vue';
+import { Head, Link, router, usePage, useForm } from '@inertiajs/vue3';
+import { ref, watch, onMounted, computed } from 'vue';
+import Modal from '@/Components/Modal.vue';
 import debounce from 'lodash/debounce';
 
 const props = defineProps({
@@ -12,6 +13,12 @@ const props = defineProps({
     isTodayHoliday: Boolean,
     filters: Object,
     officeLocation: Object,
+});
+
+const page = usePage();
+const isSuperAdmin = computed(() => {
+    return page.props.auth.user.roles.some(r => r.toLowerCase().includes('super admin')) || 
+           page.props.auth.user.roles.some(r => r.toLowerCase() === 'admin');
 });
 
 const search = ref(props.filters?.search || '');
@@ -85,6 +92,64 @@ const clockOut = async () => {
         alert("❌ Error: " + error.message + ". Please enable GPS/Location access.");
     }
 };
+
+// Edit Attendance
+const showEditModal = ref(false);
+const selectedAttendance = ref(null);
+const editForm = useForm({
+    clock_in: '',
+    clock_out: '',
+    status: 'present',
+    date: ''
+});
+
+const openEditModal = (attendance) => {
+    selectedAttendance.value = attendance;
+    editForm.clock_in = attendance.clock_in || '';
+    editForm.clock_out = attendance.clock_out || '';
+    editForm.status = attendance.status;
+    editForm.date = attendance.date;
+    showEditModal.value = true;
+};
+
+// Import Attendance
+const importForm = useForm({
+    file: null
+});
+
+const uploadFile = (event) => {
+    importForm.file = event.target.files[0];
+    if (importForm.file) {
+        importForm.post(route('attendance.import'), {
+            preserveScroll: true,
+            onSuccess: () => {
+                importForm.reset();
+            }
+        });
+    }
+};
+
+const triggerFileInput = () => {
+    document.getElementById('csv-import-input').click();
+};
+
+const exportAttendance = () => {
+    window.location.href = route('attendance.export');
+};
+
+const updateAttendance = () => {
+    editForm.put(route('attendance.update', selectedAttendance.value.id), {
+        onSuccess: () => {
+            showEditModal.value = false;
+        }
+    });
+};
+
+const deleteAttendance = (attendanceId) => {
+    if (confirm('Are you sure you want to delete this record?')) {
+        router.delete(route('attendance.destroy', attendanceId));
+    }
+};
 </script>
 
 <template>
@@ -92,11 +157,25 @@ const clockOut = async () => {
 
     <AuthenticatedLayout>
         <template #header>
-            <div class="flex justify-between items-center w-full">
-                <h2 class="text-2xl font-black leading-tight text-gray-800 uppercase tracking-tighter">
-                    Attendance
-                </h2>
-            </div>
+                <div class="flex items-center gap-3">
+                    <h2 class="text-2xl font-black leading-tight text-gray-800 uppercase tracking-tighter">
+                        Attendance
+                    </h2>
+                    
+                    <div v-if="isSuperAdmin" class="flex items-center gap-2 ml-4">
+                        <Link :href="route('attendance.calendar')" class="bg-white text-indigo-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-indigo-100 hover:bg-indigo-50 transition-all active:scale-95 shadow-sm flex items-center gap-2">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            Calendar View
+                        </Link>
+                        <button @click="exportAttendance" class="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all active:scale-95 shadow-sm">
+                            Export CSV
+                        </button>
+                        <button @click="triggerFileInput" class="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all active:scale-95 shadow-sm">
+                            Import CSV
+                        </button>
+                        <input id="csv-import-input" type="file" class="hidden" accept=".csv" @change="uploadFile" />
+                    </div>
+                </div>
         </template>
 
         <div class="py-6">
@@ -185,7 +264,8 @@ const clockOut = async () => {
                         { key: 'date', label: 'Date', sortable: true },
                         { key: 'clock_in', label: 'Clock In' },
                         { key: 'clock_out', label: 'Clock Out' },
-                        { key: 'status', label: 'Status' }
+                        { key: 'status', label: 'Status' },
+                        { key: 'actions', label: 'Actions' }
                     ]"
                     :items="attendances.data"
                     placeholder="Search logs..."
@@ -245,13 +325,22 @@ const clockOut = async () => {
                             </span>
                         </td>
                         <td class="px-6 py-6 whitespace-nowrap text-right">
-                            <span class="px-5 py-2 inline-flex text-[9px] font-black rounded-2xl uppercase tracking-[0.2em] shadow-sm border transition-all" :class="{
-                                'bg-emerald-50 text-emerald-700 border-emerald-100': log.status === 'present',
-                                'bg-rose-50 text-rose-700 border-rose-100': log.status === 'absent',
-                                'bg-amber-50 text-amber-700 border-amber-100': log.status === 'half-day'
-                            }">
-                                {{ log.status }}
-                            </span>
+                            <div class="flex items-center justify-end gap-2">
+                                <span class="px-5 py-2 inline-flex text-[9px] font-black rounded-2xl uppercase tracking-[0.2em] shadow-sm border transition-all" :class="{
+                                    'bg-emerald-50 text-emerald-700 border-emerald-100': log.status === 'present',
+                                    'bg-rose-50 text-rose-700 border-rose-100': log.status === 'absent',
+                                    'bg-amber-50 text-amber-700 border-amber-100': log.status === 'half_day' || log.status === 'half-day',
+                                    'bg-orange-50 text-orange-700 border-orange-100': log.status === 'late'
+                                }">
+                                    {{ log.status }}
+                                </span>
+                                <button v-if="isSuperAdmin" @click="openEditModal(log)" class="p-2 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                </button>
+                                <button v-if="isSuperAdmin" @click="deleteAttendance(log.id)" class="p-2 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                </button>
+                            </div>
                         </td>
                     </template>
                 </DataTable>
@@ -262,6 +351,45 @@ const clockOut = async () => {
             </div>
         </div>
 
+        <!-- Edit Attendance Modal -->
+        <Modal :show="showEditModal" @close="showEditModal = false" title="Edit Attendance Record" maxWidth="md">
+            <form @submit.prevent="updateAttendance" class="space-y-6">
+                <div class="grid grid-cols-1 gap-6">
+                    <div>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Target Date</label>
+                        <input v-model="editForm.date" type="date" class="w-full bg-gray-50 border-gray-100 rounded-2xl focus:ring-[#2CA01C] focus:border-[#2CA01C] text-sm font-bold shadow-inner" required />
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Clock In (HH:MM:SS)</label>
+                            <input v-model="editForm.clock_in" type="text" class="w-full bg-gray-50 border-gray-100 rounded-2xl focus:ring-[#2CA01C] focus:border-[#2CA01C] text-sm font-bold shadow-inner" placeholder="09:00:00" />
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Clock Out (HH:MM:SS)</label>
+                            <input v-model="editForm.clock_out" type="text" class="w-full bg-gray-50 border-gray-100 rounded-2xl focus:ring-[#2CA01C] focus:border-[#2CA01C] text-sm font-bold shadow-inner" placeholder="18:00:00" />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Daily Status</label>
+                        <select v-model="editForm.status" class="w-full bg-gray-50 border-gray-100 rounded-2xl focus:ring-[#2CA01C] focus:border-[#2CA01C] text-sm font-bold shadow-inner">
+                            <option value="present">✅ Present</option>
+                            <option value="absent">❌ Absent</option>
+                            <option value="late">🕒 Late</option>
+                            <option value="half_day">🌓 Half Day</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-50">
+                    <button type="button" @click="showEditModal = false" class="px-6 py-3 text-[10px] font-black uppercase text-gray-400 hover:text-gray-900 transition-all">Cancel</button>
+                    <button type="submit" :disabled="editForm.processing" class="px-8 py-3 bg-indigo-600 hover:bg-gray-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 disabled:opacity-50">
+                        {{ editForm.processing ? 'Saving...' : 'Update Record' }}
+                    </button>
+                </div>
+            </form>
+        </Modal>
     </AuthenticatedLayout>
 </template>
 

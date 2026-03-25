@@ -6,6 +6,7 @@ use App\Models\Task;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Response;
@@ -108,7 +109,7 @@ class TaskController extends Controller
             fputcsv($file, []); // Spacer
 
             // Data Table Headers
-            fputcsv($file, ['ID', 'Title', 'Project', 'Assigned To', 'Priority', 'Status', 'Due Date', 'Created At']);
+            fputcsv($file, ['ID', 'Title', 'Project', 'Assigned To', 'Priority', 'Status', 'Time Spent', 'Due Date', 'Created At']);
 
             foreach ($tasks as $task) {
                 fputcsv($file, [
@@ -118,6 +119,7 @@ class TaskController extends Controller
                     $task->assignee ? $task->assignee->name : 'Unassigned',
                     strtoupper($task->priority),
                     strtoupper($task->status),
+                    $task->time_spent ?? '0m',
                     $task->due_date ?? 'N/A',
                     $task->created_at->format('Y-m-d')
                 ]);
@@ -191,6 +193,7 @@ class TaskController extends Controller
                         <th>Project</th>
                         <th>Priority</th>
                         <th width='80'>Status</th>
+                        <th width='100'>Time Spent</th>
                         <th width='100'>Deadline</th>
                     </tr>
                 </thead>
@@ -206,6 +209,7 @@ class TaskController extends Controller
                 <td>" . ($task->project ? htmlspecialchars($task->project->name) : 'Independent') . "</td>
                 <td class='priority'>" . strtoupper($task->priority) . "</td>
                 <td class='status' style='color: " . ($task->status === 'completed' ? '#166534' : ($task->status === 'in_progress' ? '#1e40af' : '#92400e')) . ";'>" . strtoupper($task->status) . "</td>
+                <td style='font-weight: bold; color: #6366f1;'>" . ($task->time_spent ?? '0m') . "</td>
                 <td>" . ($task->due_date ?? 'N/A') . "</td>
             </tr>";
         }
@@ -270,38 +274,53 @@ class TaskController extends Controller
         $request->validate([
             'project_id' => 'required|exists:projects,id',
             'assigned_to' => 'nullable|exists:users,id',
-            'title' => 'required|string|max:255',
+            'title' => 'required|string',
             'description' => 'nullable|string',
             'due_date' => 'nullable|date',
             'priority' => 'required|in:low,medium,high,urgent',
+            'time_spent' => 'nullable|string',
         ]);
 
-        // Security: If not privileged, ALWAYS force assignment to self
-        $assignedTo = $request->assigned_to;
-        if (!$isPrivileged) {
-            $assignedTo = $user->id;
-        }
+        // Support Bulk Creation by splitting title by newline
+        $titles = explode("\n", $request->title);
+        $tasks = [];
 
-        $task = Task::create([
-            'project_id' => $request->project_id,
-            'assigned_to' => $assignedTo,
-            'title' => $request->title,
-            'description' => $request->description,
-            'due_date' => $request->due_date,
-            'status' => 'pending',
-            'priority' => $request->priority,
-            'created_by' => $user->id,
-        ]);
+        \DB::transaction(function() use ($titles, $request, $user, $isPrivileged, &$tasks) {
+            foreach ($titles as $rowTitle) {
+                $trimmedTitle = trim($rowTitle);
+                if (empty($trimmedTitle)) continue;
 
-        // Notify Assignee
-        if ($assignedTo) {
-            $assignee = User::find($assignedTo);
-            if ($assignee) {
-                $assignee->notify(new \App\Notifications\TaskAssignedNotification($task));
+                $assignedTo = $request->assigned_to;
+                if (!$isPrivileged) {
+                    $assignedTo = $user->id;
+                }
+
+                $task = Task::create([
+                    'project_id' => $request->project_id,
+                    'assigned_to' => $assignedTo,
+                    'title' => $trimmedTitle,
+                    'description' => $request->description,
+                    'due_date' => $request->due_date,
+                    'status' => 'pending',
+                    'priority' => $request->priority,
+                    'created_by' => $user->id,
+                    'time_spent' => $request->time_spent,
+                ]);
+
+                // Notify Assignee (Optional)
+                if ($assignedTo) {
+                    $assignee = User::find($assignedTo);
+                    if ($assignee) {
+                        try {
+                            $assignee->notify(new \App\Notifications\TaskAssignedNotification($task));
+                        } catch (\Exception $e) { /* Ignore notification errors in bulk */ }
+                    }
+                }
+                $tasks[] = $task;
             }
-        }
+        });
 
-        return redirect()->back()->with('success', '✅ Task created successfully.');
+        return redirect()->back()->with('success', count($tasks) . ' Task(s) created successfully.');
     }
 
     public function update(Request $request, Task $task)
@@ -323,6 +342,7 @@ class TaskController extends Controller
             'description' => 'nullable|string',
             'due_date' => 'nullable|date',
             'priority' => 'required|in:low,medium,high,urgent',
+            'time_spent' => 'nullable|string',
         ]);
 
         $assignedTo = $request->assigned_to;
@@ -337,6 +357,7 @@ class TaskController extends Controller
             'description' => $request->description,
             'due_date' => $request->due_date,
             'priority' => $request->priority,
+            'time_spent' => $request->time_spent,
         ]);
 
         return redirect()->back()->with('success', '✅ Task updated successfully.');
@@ -345,10 +366,38 @@ class TaskController extends Controller
     public function updateStatus(Request $request, Task $task)
     {
         $request->validate([
-            'status' => 'required|in:pending,in_progress,completed'
+            'status' => 'required|in:pending,in_progress,completed',
+            'time_spent' => 'nullable|string'
         ]);
+        
+        $data = ['status' => $request->status];
 
-        $task->update(['status' => $request->status]);
+        if ($request->status === 'in_progress' && !$task->started_at) {
+            $data['started_at'] = now();
+        }
+
+        if ($request->status === 'completed') {
+            $data['completed_at'] = now();
+            
+            if ($task->started_at) {
+                $start = \Carbon\Carbon::parse($task->started_at);
+                $end = now();
+                $diffInMinutes = $start->diffInMinutes($end);
+                
+                $hours = floor($diffInMinutes / 60);
+                $mins = $diffInMinutes % 60;
+                
+                if ($hours > 0) {
+                    $data['time_spent'] = "{$hours}h {$mins}m";
+                } else {
+                    $data['time_spent'] = "{$mins}m";
+                }
+            } else {
+                $data['time_spent'] = $request->time_spent ?? $task->time_spent;
+            }
+        }
+
+        $task->update($data);
 
         return redirect()->back()->with('success', '✅ Task status updated. Performance metrics recalculated.');
     }
