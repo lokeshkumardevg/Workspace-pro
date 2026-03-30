@@ -34,7 +34,8 @@ const form = useForm({
     attendance_bypass: false,
     joining_date: '',
     probation_months: 3,
-    role: ''
+    role: '',
+    password: ''
 });
 
 const openEditModal = (user) => {
@@ -50,6 +51,7 @@ const openEditModal = (user) => {
     form.joining_date = user.joining_date || '';
     form.probation_months = user.probation_months ?? 3;
     form.role = user.roles.length > 0 ? user.roles[0].name : '';
+    form.password = ''; // Clear out the password
     showEditModal.value = true;
 };
 
@@ -196,6 +198,14 @@ const formatCurrency = (n) =>
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-2 ml-1">Allowed IP Address</label>
                         <input v-model="form.allowed_ip" type="text" placeholder="Leave empty for all IPs" class="w-full bg-gray-50 border-gray-200 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 text-sm py-3">
+                    </div>
+                </div>
+
+                <div v-if="isSuperAdmin" class="bg-gray-50 p-4 rounded-xl border border-gray-100 mb-6">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2 ml-1">Update Password</label>
+                        <input v-model="form.password" type="password" placeholder="Leave empty to keep current password" class="w-full bg-white border-gray-200 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 text-sm py-3">
+                        <p class="text-[10px] text-gray-400 mt-1 italic">* Enter a new password to overwrite the user's current password.</p>
                     </div>
                 </div>
 

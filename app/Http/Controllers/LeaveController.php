@@ -98,6 +98,15 @@ class LeaveController extends Controller
             $reviewer->notify(new \App\Notifications\LeaveRequestNotification($leave));
         }
 
+        try {
+            \Illuminate\Support\Facades\Mail::raw("A new leave request was submitted by {$user->name} from {$request->from_date} to {$request->to_date} for reason: {$request->reason}", function ($message) use ($user) {
+                $message->to(['hr@wheedletechonologies.ai', 'dev.clientg@gmail.com', 'chris@wheedletechnologies.ai'])
+                    ->subject('New Leave Request from ' . $user->name);
+            });
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to send leave email: ' . $e->getMessage());
+        }
+
         $msg = $isPaid ? '✅ Leave request submitted successfully!' : 'ℹ️ Leave request submitted (Unpaid - Probation/Manual).';
         return redirect()->back()->with('success', $msg);
     }

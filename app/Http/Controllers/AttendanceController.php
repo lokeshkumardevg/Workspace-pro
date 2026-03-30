@@ -99,7 +99,10 @@ class AttendanceController extends Controller
         $lat = $request->lat;
         $lng = $request->lng;
 
-        if (!$isSuperAdmin) {
+        $isWfh = $request->boolean('is_wfh');
+        $wfhReason = $request->input('wfh_reason');
+
+        if (!$isSuperAdmin && !$isWfh) {
             // 🛡️ Geofencing Enforcement
             if (!$lat || !$lng) {
                 return redirect()->back()->with('error', '❌ Location access is required for attendance.');
@@ -120,14 +123,24 @@ class AttendanceController extends Controller
 
         // Holiday Check
         if ($this->holidayService->isHoliday(Carbon::today())) {
-            return redirect()->back()->with('info', 'ℹ️ Today is a holiday. Attendance is optional but recorded.');
+            if (!$isSuperAdmin) {
+                return redirect()->back()->with('error', '❌ Today is a holiday. You cannot mark attendance.');
+            }
         }
 
         $date = Carbon::today();
+        
+        // Status determination
+        $status = 'present';
+        if ($isWfh) {
+            $status = 'half_day';
+        } elseif (Carbon::now()->format('H:i:s') > '09:30:00') {
+            $status = 'late';
+        }
 
         $attendance = Attendance::firstOrCreate(
             ['user_id' => $user->id, 'date' => $date],
-            ['status' => 'present']
+            ['status' => $status]
         );
 
         if (!$attendance->clock_in) {
@@ -136,12 +149,17 @@ class AttendanceController extends Controller
                 'clock_in_ip' => $request->ip(),
                 'lat' => $lat,
                 'lng' => $lng,
+                'is_wfh' => $isWfh,
+                'wfh_reason' => $wfhReason,
+                'status' => $status,
             ]);
         }
 
-        $msg = $isSuperAdmin && !($lat && $lng)
-            ? '✅ Clocked in (Bypassed location check — Super Admin mode.)'
-            : '✅ Clocked in successfully from office location.';
+        $msg = $isWfh 
+            ? '✅ Clocked in as Work From Home (Half Day).'
+            : ($isSuperAdmin && !($lat && $lng)
+                ? '✅ Clocked in (Bypassed location check — Super Admin mode.)'
+                : '✅ Clocked in successfully.');
 
         return redirect()->back()->with('success', $msg);
     }
@@ -162,8 +180,13 @@ class AttendanceController extends Controller
         $lat = $request->lat;
         $lng = $request->lng;
         $date = Carbon::today();
+        
+        $attendance = Attendance::where('user_id', $user->id)->where('date', $date)->first();
 
-        if (!$isSuperAdmin) {
+        // Check if attendance exists and is WFH
+        $isWfh = $attendance && $attendance->is_wfh;
+
+        if (!$isSuperAdmin && !$isWfh) {
             // 🛡️ Geofencing Enforcement for Clock Out
             if (!$lat || !$lng) {
                 return redirect()->back()->with('error', '❌ Location access is required to clock out.');
@@ -181,8 +204,6 @@ class AttendanceController extends Controller
                 return redirect()->back()->with('error', '❌ Attendance not allowed from this IP.');
             }
         }
-
-        $attendance = Attendance::where('user_id', $user->id)->where('date', $date)->first();
 
         if ($attendance && !$attendance->clock_out) {
             $attendance->update([
@@ -263,28 +284,74 @@ class AttendanceController extends Controller
             abort(403);
         }
 
+        $month = $request->month ?? now()->month;
+        $year = $request->year ?? now()->year;
+
         $headers = [
             "Content-type" => "text/csv",
-            "Content-Disposition" => "attachment; filename=attendance_export_" . date('Y-m-d') . ".csv",
+            "Content-Disposition" => "attachment; filename=attendance_report_{$year}_{$month}.csv",
             "Pragma" => "no-cache",
             "Cache-Control" => "must-revalidate, post-check=0, pre-check=0",
             "Expires" => "0"
         ];
 
-        $callback = function () {
+        $callback = function () use ($month, $year) {
             $file = fopen('php://output', 'w');
-            fputcsv($file, ['ID', 'Employee Email', 'Employee Name', 'Date', 'Clock In', 'Clock Out', 'Status']);
+            fputcsv($file, ['Employee ID', 'Employee Name', 'Email', 'Total Working Days', 'Present Days', 'Absent Days']);
 
-            $attendances = Attendance::with('user')->orderBy('date', 'desc')->get();
-            foreach ($attendances as $row) {
+            $employees = \App\Models\User::whereDoesntHave('roles', fn($q) => $q->whereIn('name', ['Super Admin', 'Admin']))->get();
+
+            foreach ($employees as $employee) {
+                $startDate = Carbon::createFromDate($year, $month, 1);
+                $endDate = $startDate->copy()->endOfMonth();
+
+                $monthAttendance = Attendance::where('user_id', $employee->id)
+                    ->whereMonth('date', $month)
+                    ->whereYear('date', $year)
+                    ->get()
+                    ->keyBy('date');
+
+                $totalWorkingDays = 0;
+                $actuallyPresent = 0;
+
+                for ($date = $startDate->copy(); $date <= $endDate; $date->addDay()) {
+                    $dateStr = $date->toDateString();
+                    $isHoliday = $this->holidayService->isHoliday($date);
+                    $isWeekend = $date->isSaturday() || $date->isSunday();
+
+                    if (!$isHoliday) {
+                        $totalWorkingDays++;
+                        if (isset($monthAttendance[$dateStr]) && in_array($monthAttendance[$dateStr]->status, ['present', 'late'])) {
+                            $actuallyPresent++;
+                        } elseif (isset($monthAttendance[$dateStr]) && in_array($monthAttendance[$dateStr]->status, ['half_day', 'half-day'])) {
+                            $actuallyPresent += 0.5;
+                        }
+                    } else {
+                        if ($isWeekend) {
+                            $friday = $date->copy()->previous(Carbon::FRIDAY);
+                            $monday = $date->copy()->next(Carbon::MONDAY);
+                            $frAttendance = $monthAttendance[$friday->toDateString()] ?? null;
+                            $moAttendance = $monthAttendance[$monday->toDateString()] ?? null;
+                            if ($frAttendance && !in_array($frAttendance->status, ['present', 'late']) && $moAttendance && !in_array($moAttendance->status, ['present', 'late'])) {
+                                // Sandwich
+                            } else {
+                                $actuallyPresent++;
+                            }
+                            $totalWorkingDays++;
+                        } else {
+                            $actuallyPresent++;
+                            $totalWorkingDays++;
+                        }
+                    }
+                }
+
                 fputcsv($file, [
-                    $row->id,
-                    $row->user->email,
-                    $row->user->name,
-                    $row->date,
-                    $row->clock_in,
-                    $row->clock_out,
-                    $row->status
+                    $employee->id,
+                    $employee->name,
+                    $employee->email,
+                    $totalWorkingDays,
+                    $actuallyPresent,
+                    max(0, $totalWorkingDays - $actuallyPresent)
                 ]);
             }
             fclose($file);
@@ -398,7 +465,7 @@ class AttendanceController extends Controller
         $month = $request->month ?? now()->month;
         $year = $request->year ?? now()->year;
 
-        $employees = User::whereHas('roles', fn($q) => $q->where('name', 'Employee'))->paginate(3)->withQueryString();
+        $employees = User::whereDoesntHave('roles', fn($q) => $q->whereIn('name', ['Super Admin', 'Admin']))->paginate(3)->withQueryString();
         $reportData = $employees->getCollection()->map(function ($employee) use ($month, $year) {
             $startDate = Carbon::createFromDate($year, $month, 1);
             $endDate = $startDate->copy()->endOfMonth();

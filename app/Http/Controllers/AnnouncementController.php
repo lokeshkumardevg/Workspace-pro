@@ -37,13 +37,27 @@ class AnnouncementController extends Controller
             'expires_at' => 'nullable|date',
         ]);
 
-        Announcement::create([
+        $announcement = Announcement::create([
             'user_id' => auth()->id(),
             'title' => $request->input('title'),
             'content' => $request->input('content'),
             'type' => $request->input('type'),
             'expires_at' => $request->input('expires_at'),
         ]);
+
+        try {
+            $users = \App\Models\User::pluck('email')->filter()->toArray();
+            if (!empty($users)) {
+                $title = $request->input('title');
+                $content = $request->input('content');
+                \Illuminate\Support\Facades\Mail::raw("A new announcement has been posted:\n\nTitle: {$title}\n\n{$content}", function ($message) use ($users, $title) {
+                    $message->bcc($users)
+                        ->subject('New Announcement: ' . $title);
+                });
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to send announcement email: ' . $e->getMessage());
+        }
 
         return redirect()->back()->with('success', '📢 Announcement broadcasted successfully.');
     }

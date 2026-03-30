@@ -47,6 +47,10 @@ class UserController extends Controller
             'attendance_bypass' => 'nullable|boolean',
         ]);
 
+        if ($request->filled('password')) {
+            $validated['password'] = bcrypt($request->password);
+        }
+
         $user->update($validated);
 
         if ($request->has('role')) {

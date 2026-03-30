@@ -76,6 +76,27 @@ const clockIn = async () => {
     }
 };
 
+// Work From Home
+const showWfhModal = ref(false);
+const wfhForm = useForm({
+    is_wfh: true,
+    wfh_reason: ''
+});
+
+const openWfhModal = () => {
+    wfhForm.reset();
+    showWfhModal.value = true;
+};
+
+const submitWfh = () => {
+    wfhForm.post(route('attendance.clock-in'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            showWfhModal.value = false;
+        }
+    });
+};
+
 const clockOut = async () => {
     isLocating.value = true;
     try {
@@ -227,14 +248,20 @@ const deleteAttendance = (attendanceId) => {
                     </div>
 
                     <div class="flex items-center gap-4">
-                        <button v-if="!todayAttendance || !todayAttendance.clock_in" 
-                                @click="clockIn" 
-                                :disabled="isLocating"
-                                class="bg-indigo-600 hover:bg-gray-900 text-white px-8 py-3.5 rounded-2xl font-black shadow-lg hover:shadow-xl transition-all flex items-center gap-3 active:scale-95 group disabled:opacity-50">
-                            <svg v-if="isLocating" class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                            <svg v-else class="w-6 h-6 transition-transform group-hover:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
-                            {{ isLocating ? 'Verifying...' : 'Clock In' }}
-                        </button>
+                        <div v-if="!todayAttendance || !todayAttendance.clock_in" class="flex flex-col sm:flex-row items-center gap-3">
+                            <button @click="clockIn" 
+                                    :disabled="isLocating"
+                                    class="bg-indigo-600 hover:bg-gray-900 text-white px-8 py-3.5 rounded-2xl font-black shadow-lg hover:shadow-xl transition-all flex items-center gap-3 active:scale-95 group disabled:opacity-50">
+                                <svg v-if="isLocating" class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                <svg v-else class="w-6 h-6 transition-transform group-hover:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
+                                {{ isLocating ? 'Verifying...' : 'Office In' }}
+                            </button>
+                            <button @click="openWfhModal" 
+                                    class="bg-amber-100 hover:bg-amber-500 text-amber-700 hover:text-white px-6 py-3.5 rounded-2xl font-black shadow-sm transition-all flex items-center gap-2 active:scale-95 group">
+                                <span class="text-xl">🏠</span>
+                                WFH
+                            </button>
+                        </div>
                         
                         <div v-else-if="todayAttendance && !todayAttendance.clock_out" class="flex flex-col sm:flex-row items-center gap-4">
                             <div class="text-center sm:text-left">
@@ -390,6 +417,26 @@ const deleteAttendance = (attendanceId) => {
                 </div>
             </form>
         </Modal>
+
+        <!-- WFH Modal -->
+        <Modal :show="showWfhModal" @close="showWfhModal = false" title="Request Work From Home" maxWidth="md">
+            <form @submit.prevent="submitWfh" class="space-y-6">
+                <div class="grid grid-cols-1 gap-6">
+                    <div>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Reason / Details</label>
+                        <textarea v-model="wfhForm.wfh_reason" rows="4" class="w-full bg-gray-50 border-gray-100 rounded-2xl focus:ring-[#2CA01C] focus:border-[#2CA01C] text-sm font-bold shadow-inner" placeholder="Why are you working from home today?" required></textarea>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-50">
+                    <button type="button" @click="showWfhModal = false" class="px-6 py-3 text-[10px] font-black uppercase text-gray-400 hover:text-gray-900 transition-all">Cancel</button>
+                    <button type="submit" :disabled="wfhForm.processing" class="px-8 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 disabled:opacity-50">
+                        {{ wfhForm.processing ? 'Submitting...' : 'Confirm WFH' }}
+                    </button>
+                </div>
+            </form>
+        </Modal>
+
     </AuthenticatedLayout>
 </template>
 
