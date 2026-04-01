@@ -28,10 +28,13 @@ class LeaveController extends Controller
             $query->where('status', $request->status);
         }
 
-        // Employees can only see their own
-        $isPrivileged = $user->hasPermissionTo('view leaves') || 
-                        $user->roles->whereIn('name', ['Super Admin', 'Admin', 'HR', 'manager', 'team lead'])->count() > 0;
+        // Employees can only see their own leaves
+        // STRICT role-based check only — no permission override to prevent data leaks
+        $privilegedRoles = ['Super Admin', 'Admin', 'HR', 'Manager', 'manager', 'team lead', 'Team Lead'];
+        $isPrivileged = $user->roles->whereIn('name', $privilegedRoles)->count() > 0;
+
         if (!$isPrivileged) {
+            // Normal employees: only their own leaves
             $query->where('user_id', $user->id);
         }
 
@@ -46,9 +49,10 @@ class LeaveController extends Controller
         $leaves = $query->paginate(10)->withQueryString();
 
         return Inertia::render('Leaves/Index', [
-            'leaves' => $leaves,
-            'stats' => $stats,
-            'filters' => $request->only('search', 'status'),
+            'leaves'       => $leaves,
+            'stats'        => $stats,
+            'filters'      => $request->only('search', 'status'),
+            'isPrivileged' => $isPrivileged,
         ]);
     }
 

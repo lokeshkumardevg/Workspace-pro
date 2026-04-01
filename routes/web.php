@@ -153,4 +153,15 @@ Route::middleware('auth')->group(function () {
     Route::delete('/payroll/{payroll}', [\App\Http\Controllers\PayrollController::class, 'destroy'])->name('payroll.destroy');
 });
 
+// Temporary debug route - check office config from DB
+Route::get('/debug-office', function () {
+    $settings = \App\Models\SystemSetting::all()->pluck('value', 'key');
+    return response()->json([
+        'db_office_lat' => $settings['office_lat'] ?? 'NOT SET (using default)',
+        'db_office_lng' => $settings['office_lng'] ?? 'NOT SET (using default)',
+        'db_office_radius' => $settings['office_radius'] ?? 'NOT SET (using default 200m)',
+        'all_settings' => $settings,
+    ]);
+})->middleware('auth');
+
 require __DIR__ . '/auth.php';

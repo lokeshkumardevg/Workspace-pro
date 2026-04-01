@@ -8,9 +8,10 @@ import { ref, watch, computed } from 'vue';
 import debounce from 'lodash/debounce';
 
 const props = defineProps({
-    leaves:  Object,
-    stats:   Object,
-    filters: Object,
+    leaves:       Object,
+    stats:        Object,
+    filters:      Object,
+    isPrivileged: Boolean,
 });
 
 const search      = ref(props.filters?.search || '');
@@ -112,12 +113,12 @@ const statusClass = (s) => ({
             <!-- DataTable -->
             <DataTable 
                 :headers="[
-                    { key: 'user', label: 'Employee' },
+                    ...(isPrivileged ? [{ key: 'user', label: 'Employee' }] : []),
                     { key: 'type', label: 'Leave Type' },
                     { key: 'duration', label: 'Date Range' },
                     { key: 'days', label: 'Total Days' },
                     { key: 'status', label: 'Status' },
-                    { key: 'reviewer', label: 'Reviewed By' },
+                    ...(isPrivileged ? [{ key: 'reviewer', label: 'Reviewed By' }] : []),
                     { key: 'actions', label: 'Actions' }
                 ]"
                 :items="leaves.data"
@@ -146,7 +147,8 @@ const statusClass = (s) => ({
                 </template>
 
                 <template #row="{ item: leave }">
-                    <td class="px-6 py-4">
+                    <!-- Employee column - only for privileged users -->
+                    <td v-if="isPrivileged" class="px-6 py-4">
                         <div class="flex items-center gap-3">
                             <img class="h-10 w-10 rounded-full border border-gray-100 shadow-sm" :src="'https://ui-avatars.com/api/?name='+leave.user.name+'&background=random'" alt="" />
                             <div class="text-left">
@@ -178,7 +180,8 @@ const statusClass = (s) => ({
                             {{ leave.status }}
                         </span>
                     </td>
-                    <td class="px-6 py-4">
+                    <!-- Reviewed By column - only for privileged users -->
+                    <td v-if="isPrivileged" class="px-6 py-4">
                         <div v-if="leave.reviewer" class="flex items-center gap-2">
                              <img class="w-6 h-6 rounded-full border border-gray-100" :src="'https://ui-avatars.com/api/?name='+leave.reviewer.name+'&background=random'" alt="" />
                              <div class="text-left">
@@ -189,7 +192,7 @@ const statusClass = (s) => ({
                         <span v-else class="text-[10px] text-gray-300 italic">Not Reviewed</span>
                     </td>
                     <td class="px-6 py-4">
-                        <div v-if="leave.status === 'pending' && ($page.props.auth.user.permissions.includes('approve leaves') || $page.props.auth.user.roles.includes('Super Admin'))"
+                        <div v-if="isPrivileged && leave.status === 'pending'"
                              class="flex items-center gap-2">
                             <button @click="openReview(leave, 'approved')"
                                 class="bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all shadow-sm active:scale-90 flex items-center gap-1">

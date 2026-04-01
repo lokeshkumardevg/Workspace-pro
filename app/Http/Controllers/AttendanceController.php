@@ -86,10 +86,10 @@ class AttendanceController extends Controller
     public function clockIn(Request $request)
     {
         $user = $request->user();
-        $isSuperAdmin = $user->hasRole('Super Admin') || $user->attendance_bypass;
+        $isBypass = $user->hasRole('Super Admin') || $user->attendance_bypass;
 
-        // 🚫 Block Mobile Devices (Exempting Super Admin)
-        if (!$isSuperAdmin) {
+        // 🚫 Block Mobile Devices (Exempting Bypass Users)
+        if (!$isBypass) {
             $userAgent = $request->header('User-Agent');
             if (preg_match('/Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i', $userAgent)) {
                 return redirect()->back()->with('error', '❌ Attendance is NOT allowed from mobile devices. Please use a Desktop or Laptop.');
@@ -102,28 +102,33 @@ class AttendanceController extends Controller
         $isWfh = $request->boolean('is_wfh');
         $wfhReason = $request->input('wfh_reason');
 
-        if (!$isSuperAdmin && !$isWfh) {
-            // 🛡️ Geofencing Enforcement
+        if (!$isWfh) {
+            // ✅ Lat/Lng is required for ALL users (including bypass) — to save location data
             if (!$lat || !$lng) {
-                return redirect()->back()->with('error', '❌ Location access is required for attendance.');
-            }
+                if (!$isBypass) {
+                    // Non-bypass users: strictly block
+                    return redirect()->back()->with('error', '❌ Location access is required for attendance.');
+                }
+                // Bypass users without location: allow but note it
+            } else {
+                // ✅ Always check geofencing — but only BLOCK non-bypass users
+                $office = $this->getOfficeConfig();
+                $distance = $this->calculateDistance($lat, $lng, $office['lat'], $office['lng']);
 
-            $office = $this->getOfficeConfig();
-            $distance = $this->calculateDistance($lat, $lng, $office['lat'], $office['lng']);
+                if ($distance > $office['radius'] && !$isBypass) {
+                    return redirect()->back()->with('error', sprintf('❌ Outside Office Boundary. You are %.2f meters away.', $distance));
+                }
 
-            if ($distance > $office['radius']) {
-                return redirect()->back()->with('error', sprintf('❌ Outside Office Boundary. You are %.2f meters away.', $distance));
-            }
-
-            // 🛡️ IP Enforcement
-            if ($user->allowed_ip && $request->ip() !== $user->allowed_ip) {
-                return redirect()->back()->with('error', '❌ Attendance not allowed from this IP. Current IP: ' . $request->ip());
+                // 🛡️ IP Enforcement (non-bypass only)
+                if (!$isBypass && $user->allowed_ip && $request->ip() !== $user->allowed_ip) {
+                    return redirect()->back()->with('error', '❌ Attendance not allowed from this IP. Current IP: ' . $request->ip());
+                }
             }
         }
 
         // Holiday Check
         if ($this->holidayService->isHoliday(Carbon::today())) {
-            if (!$isSuperAdmin) {
+            if (!$isBypass) {
                 return redirect()->back()->with('error', '❌ Today is a holiday. You cannot mark attendance.');
             }
         }
@@ -147,18 +152,18 @@ class AttendanceController extends Controller
             $attendance->update([
                 'clock_in'    => Carbon::now()->format('H:i:s'),
                 'clock_in_ip' => $request->ip(),
-                'lat' => $lat,
-                'lng' => $lng,
-                'is_wfh' => $isWfh,
-                'wfh_reason' => $wfhReason,
-                'status' => $status,
+                'lat'         => $lat ?: null,
+                'lng'         => $lng ?: null,
+                'is_wfh'      => $isWfh,
+                'wfh_reason'  => $wfhReason,
+                'status'      => $status,
             ]);
         }
 
         $msg = $isWfh 
             ? '✅ Clocked in as Work From Home (Half Day).'
-            : ($isSuperAdmin && !($lat && $lng)
-                ? '✅ Clocked in (Bypassed location check — Super Admin mode.)'
+            : ($isBypass && !($lat && $lng)
+                ? '✅ Clocked in (Bypass mode — no location provided.)'
                 : '✅ Clocked in successfully.');
 
         return redirect()->back()->with('success', $msg);
@@ -167,10 +172,10 @@ class AttendanceController extends Controller
     public function clockOut(Request $request)
     {
         $user = $request->user();
-        $isSuperAdmin = $user->hasRole('Super Admin') || $user->attendance_bypass;
+        $isBypass = $user->hasRole('Super Admin') || $user->attendance_bypass;
 
-        // 🚫 Block Mobile Devices (Exempting Super Admin)
-        if (!$isSuperAdmin) {
+        // 🚫 Block Mobile Devices (Exempting Bypass Users)
+        if (!$isBypass) {
             $userAgent = $request->header('User-Agent');
             if (preg_match('/Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i', $userAgent)) {
                 return redirect()->back()->with('error', '❌ Attendance is NOT allowed from mobile devices. Please use a Desktop or Laptop.');
@@ -183,36 +188,46 @@ class AttendanceController extends Controller
         
         $attendance = Attendance::where('user_id', $user->id)->where('date', $date)->first();
 
+        if (!$attendance || !$attendance->clock_in) {
+            return redirect()->back()->with('error', '❌ You have not clocked in today.');
+        }
+
+        if ($attendance->clock_out) {
+            return redirect()->back()->with('error', '❌ You have already clocked out today.');
+        }
+
         // Check if attendance exists and is WFH
-        $isWfh = $attendance && $attendance->is_wfh;
+        $isWfh = $attendance->is_wfh;
 
-        if (!$isSuperAdmin && !$isWfh) {
-            // 🛡️ Geofencing Enforcement for Clock Out
+        if (!$isWfh) {
+            // ✅ Collect lat/lng for ALL users — but only BLOCK non-bypass users if outside boundary
             if (!$lat || !$lng) {
-                return redirect()->back()->with('error', '❌ Location access is required to clock out.');
-            }
+                if (!$isBypass) {
+                    return redirect()->back()->with('error', '❌ Location access is required to clock out.');
+                }
+                // Bypass users: allow without location
+            } else {
+                // ✅ Run geofencing check — but only BLOCK non-bypass users
+                $office   = $this->getOfficeConfig();
+                $distance = $this->calculateDistance($lat, $lng, $office['lat'], $office['lng']);
 
-            $office   = $this->getOfficeConfig();
-            $distance = $this->calculateDistance($lat, $lng, $office['lat'], $office['lng']);
+                if ($distance > $office['radius'] && !$isBypass) {
+                    return redirect()->back()->with('error', sprintf('❌ Outside Office Boundary. You are %.2f meters away.', $distance));
+                }
 
-            if ($distance > $office['radius']) {
-                return redirect()->back()->with('error', sprintf('❌ Outside Office Boundary. You are %.2f meters away.', $distance));
-            }
-
-            // 🛡️ IP Enforcement
-            if ($user->allowed_ip && $request->ip() !== $user->allowed_ip) {
-                return redirect()->back()->with('error', '❌ Attendance not allowed from this IP.');
+                // 🛡️ IP Enforcement (non-bypass only)
+                if (!$isBypass && $user->allowed_ip && $request->ip() !== $user->allowed_ip) {
+                    return redirect()->back()->with('error', '❌ Attendance not allowed from this IP.');
+                }
             }
         }
 
-        if ($attendance && !$attendance->clock_out) {
-            $attendance->update([
-                'clock_out'    => Carbon::now()->format('H:i:s'),
-                'clock_out_ip' => $request->ip(),
-                'out_lat'      => $lat,
-                'out_lng'      => $lng,
-            ]);
-        }
+        $attendance->update([
+            'clock_out'    => Carbon::now()->format('H:i:s'),
+            'clock_out_ip' => $request->ip(),
+            'out_lat'      => $lat ?: null,
+            'out_lng'      => $lng ?: null,
+        ]);
 
         return redirect()->back()->with('success', '👋 Clocked out successfully.');
     }

@@ -28,10 +28,10 @@ const isCapturing = ref(false);
 
 const captureLocation = () => {
     if (!navigator.geolocation) {
-        alert("Geolocation not supported by browser.");
+        alert('Geolocation not supported by your browser.');
         return;
     }
-    
+
     isCapturing.value = true;
     navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -40,19 +40,16 @@ const captureLocation = () => {
             isCapturing.value = false;
         },
         (err) => {
-            alert("Error capturing location: " + err.message);
+            alert('Error capturing location: ' + err.message);
             isCapturing.value = false;
         },
-        { enableHighAccuracy: true }
+        { enableHighAccuracy: true, timeout: 10000 }
     );
 };
 
 const saveSettings = () => {
     form.post(route('settings.update'), {
         preserveScroll: true,
-        onSuccess: () => {
-            // Optional notifications can be handled via global flash props
-        }
     });
 };
 </script>
