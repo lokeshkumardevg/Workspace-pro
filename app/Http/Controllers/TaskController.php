@@ -32,10 +32,14 @@ class TaskController extends Controller
 
         // Security: Stricter Privacy - Everyone sees only their own tasks (assigned to them)
         // OR tasks they created (to manage those they haven't assigned yet)
-        $tasksQuery->where(function($q) use ($user) {
-            $q->where('assigned_to', $user->id)
-              ->orWhere('created_by', $user->id);
-        });
+        if ($isPrivileged && $request->employee_id) {
+            $tasksQuery->where('assigned_to', $request->employee_id);
+        } else {
+            $tasksQuery->where(function($q) use ($user) {
+                $q->where('assigned_to', $user->id)
+                  ->orWhere('created_by', $user->id);
+            });
+        }
 
         // Performance Calculation Logic
         $performanceData = $this->calculatePerformance($user, $request, $isPrivileged);
@@ -51,7 +55,7 @@ class TaskController extends Controller
             'users' => $users,
             'performance' => $performanceData['score'],
             'performanceLabel' => $performanceData['label'],
-            'filters' => $request->only(['search', 'filter_type', 'start_date', 'end_date'])
+            'filters' => $request->only(['search', 'filter_type', 'start_date', 'end_date', 'employee_id'])
         ]);
     }
 
@@ -250,8 +254,13 @@ class TaskController extends Controller
         if (!$isPrivileged) {
             $perfQuery->where('assigned_to', $user->id);
             $label = "My Performance";
+        } elseif ($request->employee_id) {
+            $perfQuery->where('assigned_to', $request->employee_id);
+            $assignedUser = User::find($request->employee_id);
+            $label = $assignedUser ? "{$assignedUser->name}'s Performance" : "Performance";
         } else {
-            $label = "Team Progress";
+            $perfQuery->where('assigned_to', $user->id);
+            $label = "My Performance";
         }
 
         $total = (clone $perfQuery)->count();
@@ -366,7 +375,7 @@ class TaskController extends Controller
     public function updateStatus(Request $request, Task $task)
     {
         $request->validate([
-            'status' => 'required|in:pending,in_progress,completed',
+            'status' => 'required|in:pending,in_progress,testing,completed',
             'time_spent' => 'nullable|string'
         ]);
         

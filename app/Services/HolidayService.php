@@ -13,9 +13,17 @@ class HolidayService
      */
     public function isHoliday(Carbon $date): bool
     {
-        // 1. Every Saturday and Sunday is off
-        if ($date->isSaturday() || $date->isSunday()) {
+        // 1. Every Sunday is off
+        if ($date->isSunday()) {
             return true;
+        }
+
+        // 2. 2nd and 4th Saturday is off
+        if ($date->isSaturday()) {
+            $saturdayNumber = ceil($date->day / 7);
+            if ($saturdayNumber == 2 || $saturdayNumber == 4) {
+                return true;
+            }
         }
 
         // 3. Check official holidays table

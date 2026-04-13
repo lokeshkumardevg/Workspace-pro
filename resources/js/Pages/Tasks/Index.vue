@@ -26,6 +26,7 @@ const filter = reactive({
     filter_type: props.filters?.filter_type || 'all',
     start_date: props.filters?.start_date || '',
     end_date: props.filters?.end_date || '',
+    employee_id: props.filters?.employee_id || '',
 });
 
 const currentView = ref('list'); // 'list' or 'board'
@@ -45,6 +46,7 @@ watch(() => filter.filter_type, () => {
 });
 watch(() => filter.start_date, updateFilters);
 watch(() => filter.end_date, updateFilters);
+watch(() => filter.employee_id, updateFilters);
 
 const showExportDropdown = ref(false);
 
@@ -152,6 +154,11 @@ const inProgressTasks = computed({
     set: (val) => {}
 });
 
+const testingTasks = computed({
+    get: () => props.tasks.data.filter(t => t.status === 'testing'),
+    set: (val) => {}
+});
+
 const completedTasks = computed({
     get: () => props.tasks.data.filter(t => t.status === 'completed'),
     set: (val) => {}
@@ -253,7 +260,7 @@ const formatDateTime = (d) => {
                     <!-- Performance Widget -->
                     <div v-if="performance !== null" class="hidden sm:flex bg-white border-2 border-indigo-100 rounded-2xl px-5 py-2 flex items-center gap-4 shadow-sm group hover:shadow-md transition-all">
                         <div class="flex flex-col">
-                            <span class="text-[10px] font-black text-indigo-600 uppercase tracking-widest leading-tight">Performance</span>
+                            <span class="text-[10px] font-black text-indigo-600 uppercase tracking-widest leading-tight">{{ performanceLabel || 'Performance' }}</span>
                             <span class="text-xl font-black text-gray-900 leading-none">{{ performance }}%</span>
                         </div>
                         <div class="w-12 bg-gray-100 rounded-full h-2 overflow-hidden shadow-inner border border-gray-50">
@@ -303,6 +310,14 @@ const formatDateTime = (d) => {
                                     <svg class="h-4 w-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                                 </div>
                             </div>
+                        </div>
+
+                        <div v-if="isPrivileged">
+                            <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Employee View</label>
+                            <select v-model="filter.employee_id" class="w-full bg-gray-50 border-gray-100 rounded-xl focus:ring-[#2CA01C] focus:border-[#2CA01C] text-sm font-bold transition-all shadow-inner">
+                                <option value="">My Performance</option>
+                                <option v-for="u in users" :key="u.id" :value="u.id">{{ u.name }}</option>
+                            </select>
                         </div>
 
                         <div>
@@ -451,10 +466,12 @@ const formatDateTime = (d) => {
                                 <select v-model="task.status" @change="updateStatus(task.id, $event.target.value)" class="text-[9px] font-black uppercase tracking-[0.2em] border-2 rounded-2xl px-5 py-2.5 transition-all cursor-pointer shadow-xl border-transparent focus:ring-4 focus:ring-indigo-50" :class="{
                                     'bg-amber-50 text-amber-700': task.status === 'pending',
                                     'bg-indigo-50 text-indigo-700': task.status === 'in_progress',
+                                    'bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200': task.status === 'testing',
                                     'bg-emerald-50 text-emerald-700': task.status === 'completed'
                                 }">
                                     <option value="pending">⏳ Pending</option>
                                     <option value="in_progress">🔄 In Progress</option>
+                                    <option value="testing">🧪 Testing</option>
                                     <option value="completed">✅ Completed</option>
                                 </select>
                             </td>
@@ -479,7 +496,7 @@ const formatDateTime = (d) => {
                 </div>
 
                 <!-- Jira Board View (Draggable) -->
-                <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-8 pb-12 overflow-x-auto min-w-[1000px] md:min-w-0">
+                <div v-else class="grid grid-cols-1 md:grid-cols-4 gap-8 pb-12 overflow-x-auto min-w-[1250px] md:min-w-0">
                     <!-- Column: Pending (To Do) -->
                     <div class="flex flex-col bg-gray-100/40 rounded-[2.5rem] p-6 border-2 border-white shadow-inner min-h-[650px]">
                         <div class="flex items-center justify-between mb-8 px-4">
@@ -581,6 +598,55 @@ const formatDateTime = (d) => {
                                         </div>
                                         <div class="flex items-center gap-2">
                                             <button @click.stop="openCommunication(task)" class="p-2 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-gray-900 hover:text-white transition-all shadow-sm">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </draggable>
+                    </div>
+
+                    <!-- Column: Testing -->
+                    <div class="flex flex-col bg-gray-100/40 rounded-[2.5rem] p-6 border-2 border-white shadow-inner min-h-[650px]">
+                        <div class="flex items-center justify-between mb-8 px-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-3 h-3 rounded-full bg-fuchsia-500 animate-pulse"></div>
+                                <h3 class="text-sm font-black uppercase tracking-widest text-fuchsia-600">Testing</h3>
+                            </div>
+                            <span class="bg-fuchsia-100 text-fuchsia-600 text-[10px] px-3 py-1 rounded-full font-black">{{ testingTasks.length }}</span>
+                        </div>
+
+                        <draggable 
+                            v-model="testingTasks" 
+                            group="tasks" 
+                            item-key="id" 
+                            class="flex-1 space-y-4"
+                            @change="evt => onMove(evt, 'testing')"
+                        >
+                            <template #item="{ element: task }">
+                                <div class="bg-white p-5 rounded-[1.8rem] shadow-sm border-2 border-transparent hover:border-fuchsia-400 hover:shadow-xl hover:-translate-y-1 transition-all cursor-grab active:cursor-grabbing group">
+                                    <div class="flex justify-between items-start mb-4">
+                                        <div class="flex flex-col gap-1">
+                                            <span class="text-[9px] font-black text-gray-400 uppercase tracking-tighter">ID: {{ task.id }}</span>
+                                            <span class="text-[8px] font-black text-fuchsia-500 bg-fuchsia-50 px-2 py-0.5 rounded-lg border border-fuchsia-100 uppercase tracking-tight">{{ task.project?.name || 'Independent' }}</span>
+                                        </div>
+                                        <div v-if="task.priority" class="h-2 w-2 rounded-full" :class="{ 'bg-emerald-400': task.priority === 'low', 'bg-amber-400': task.priority === 'medium', 'bg-orange-500': task.priority === 'high', 'bg-rose-500': task.priority === 'urgent' }"></div>
+                                    </div>
+                                    <h4 class="text-xs font-black text-gray-900 leading-snug uppercase tracking-tight mb-2 group-hover:text-fuchsia-600 transition-colors">{{ task.title }}</h4>
+                                    
+                                    <div v-if="task.time_spent" class="inline-flex items-center gap-1 text-[8px] font-black text-fuchsia-600 bg-fuchsia-50 px-2 py-1 rounded-lg border border-fuchsia-100 uppercase tracking-widest mb-4">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                        {{ task.time_spent }}
+                                    </div>
+                                    
+                                    <div class="flex items-center justify-between mt-6">
+                                        <div class="flex items-center gap-2">
+                                            <img class="h-8 w-8 rounded-xl border-2 border-white shadow-sm" :src="'https://ui-avatars.com/api/?name='+(task.assignee?.name || 'U')+'&background=d946ef&color=fff'" alt="Avatar">
+                                            <span class="text-[9px] font-black text-gray-500 uppercase tracking-tight">{{ task.assignee?.name || 'Self' }}</span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <button @click.stop="openCommunication(task)" class="p-2 bg-fuchsia-50 text-fuchsia-600 rounded-xl hover:bg-gray-900 hover:text-white transition-all shadow-sm">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
                                             </button>
                                         </div>

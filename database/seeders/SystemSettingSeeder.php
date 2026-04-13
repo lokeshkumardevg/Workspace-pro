@@ -23,6 +23,8 @@ class SystemSettingSeeder extends Seeder
             'office_lng' => '77.2090',
             'office_radius' => '200',
             'default_probation_months' => '3',
+            'shift_start_time' => '09:30:00',
+            'shift_end_time' => '18:30:00',
             'footer_text' => '© 2026 Task Management System. All Rights Reserved.',
         ];
 

@@ -70,56 +70,70 @@ const applyFilter = () => {
                 </div>
 
                 <!-- Report Table using DataTable -->
-                <DataTable 
-                    :headers="[
-                        { key: 'employee', label: 'Employee Name', sortable: true },
-                        { key: 'working_days', label: 'Working Days' },
-                        { key: 'present_days', label: 'Present' },
-                        { key: 'absent_days', label: 'Absent' },
-                        { key: 'percentage', label: 'Attendance %' },
-                        { key: 'actions', label: 'Details' }
-                    ]"
-                    :items="report.data"
-                    :searchable="false"
-                >
-                    <template #row="{ item }">
-                        <td class="px-6 py-6">
-                            <div class="flex items-center gap-4">
-                                <div class="w-10 h-10 rounded-[1.2rem] bg-indigo-50 flex items-center justify-center text-indigo-600 font-black text-xs uppercase border border-indigo-100 shadow-sm">
-                                    {{ item.employee.charAt(0) }}
+                <div class="overflow-x-auto w-full">
+                    <DataTable 
+                        :headers="[
+                            { key: 'employee', label: 'Employee Name', sortable: true },
+                            { key: 'working_days', label: 'Work Days' },
+                            { key: 'weekends', label: 'Weekends' },
+                            { key: 'holidays', label: 'Holidays' },
+                            { key: 'present_days', label: 'Present' },
+                            { key: 'half_days', label: 'Half/WFH' },
+                            { key: 'leave_days', label: 'Leaves' },
+                            { key: 'absent_days', label: 'Absent' },
+                            { key: 'percentage', label: 'Score %' },
+                            { key: 'actions', label: 'Details' }
+                        ]"
+                        :items="report.data"
+                        :searchable="false"
+                    >
+                        <template #row="{ item }">
+                            <td class="px-6 py-6">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-10 h-10 rounded-[1.2rem] bg-indigo-50 flex items-center justify-center text-indigo-600 font-black text-xs uppercase border border-indigo-100 shadow-sm">
+                                        {{ item.employee.charAt(0) }}
+                                    </div>
+                                    <div>
+                                        <p class="font-black text-gray-900 text-sm uppercase tracking-tight">{{ item.employee }}</p>
+                                        <p class="text-[9px] text-gray-400 font-bold uppercase tracking-widest">{{ item.email }}</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p class="font-black text-gray-900 text-sm uppercase tracking-tight">{{ item.employee }}</p>
-                                    <p class="text-[9px] text-gray-400 font-bold uppercase tracking-widest">{{ item.email }}</p>
+                            </td>
+                            <td class="px-6 py-6 font-black text-gray-800 uppercase tracking-widest text-xs">{{ item.working_days }}</td>
+                            <td class="px-6 py-6 font-black text-blue-500 uppercase tracking-widest text-xs">{{ item.weekends }}</td>
+                            <td class="px-6 py-6 font-black text-purple-500 uppercase tracking-widest text-xs">{{ item.holidays }}</td>
+                            <td class="px-6 py-6">
+                                <span class="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 font-black text-[10px] uppercase shadow-sm border border-emerald-100">
+                                    {{ item.present_days }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-6 font-black text-amber-500 uppercase tracking-widest text-xs">
+                                {{ item.half_days }}
+                            </td>
+                            <td class="px-6 py-6 font-black text-blue-500 uppercase tracking-widest text-xs">
+                                {{ item.leave_days }}
+                            </td>
+                            <td class="px-6 py-6">
+                                <span class="px-3 py-1.5 rounded-xl bg-rose-50 text-rose-700 font-black text-[10px] uppercase shadow-sm border border-rose-100">
+                                    {{ item.absent_days }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-6 w-24">
+                                <div class="flex flex-col gap-2">
+                                    <div class="flex items-center justify-between">
+                                         <span class="text-[9px] font-black text-gray-900 uppercase tracking-tighter">{{ item.working_days > 0 ? Math.round(((item.present_days + item.leave_days) / item.working_days) * 100) : 0 }}%</span>
+                                    </div>
+                                    <div class="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden shadow-inner border border-gray-50">
+                                        <div class="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 transition-all duration-1000" :style="{ width: (item.working_days > 0 ? Math.round(((item.present_days + item.leave_days) / item.working_days) * 100) : 0) + '%' }"></div>
+                                    </div>
                                 </div>
-                            </div>
-                        </td>
-                        <td class="px-6 py-6 font-black text-gray-400 uppercase tracking-widest text-xs">{{ item.working_days }} Days</td>
-                        <td class="px-6 py-6">
-                            <span class="px-4 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 font-black text-[10px] uppercase shadow-sm border border-emerald-100 italic">
-                                {{ item.present_days }} Days
-                            </span>
-                        </td>
-                        <td class="px-6 py-6">
-                            <span class="px-4 py-1.5 rounded-xl bg-rose-50 text-rose-700 font-black text-[10px] uppercase shadow-sm border border-rose-100 italic">
-                                {{ item.absent_days }} Days
-                            </span>
-                        </td>
-                        <td class="px-6 py-6">
-                            <div class="flex flex-col gap-2">
-                                <div class="flex items-center justify-between">
-                                     <span class="text-[10px] font-black text-gray-900 uppercase tracking-tighter">{{ Math.round((item.present_days / item.working_days) * 100) }}% Attendance</span>
-                                </div>
-                                <div class="w-full h-2 bg-gray-100 rounded-full overflow-hidden shadow-inner border border-gray-50">
-                                    <div class="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 transition-all duration-1000" :style="{ width: Math.round((item.present_days / item.working_days) * 100) + '%' }"></div>
-                                </div>
-                            </div>
-                        </td>
-                        <td class="px-6 py-6 text-right">
-                            <button class="bg-gray-50 hover:bg-gray-900 hover:text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all">Details</button>
-                        </td>
-                    </template>
-                </DataTable>
+                            </td>
+                            <td class="px-6 py-6 text-right">
+                                <button class="bg-gray-50 hover:bg-gray-900 hover:text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all">Details</button>
+                            </td>
+                        </template>
+                    </DataTable>
+                </div>
 
                 <!-- Pagination -->
                 <div class="flex justify-end pr-4">

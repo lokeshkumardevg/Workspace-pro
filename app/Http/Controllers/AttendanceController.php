@@ -68,6 +68,7 @@ class AttendanceController extends Controller
         ];
 
         $office = $this->getOfficeConfig();
+        $settings = \App\Models\SystemSetting::all()->pluck('value', 'key');
 
         return Inertia::render('Attendance/Index', [
             'attendances' => $attendances,
@@ -75,6 +76,8 @@ class AttendanceController extends Controller
             'isTodayHoliday' => $isTodayHoliday,
             'personalStats' => $personalStats,
             'filters' => $request->only('search'),
+            'shiftStartTime' => $settings['shift_start_time'] ?? '09:00:00',
+            'shiftEndTime' => $settings['shift_end_time'] ?? '18:00:00',
             'officeLocation' => [
                 'lat' => $office['lat'],
                 'lng' => $office['lng'],
@@ -135,11 +138,14 @@ class AttendanceController extends Controller
 
         $date = Carbon::today();
         
+        $settings = \App\Models\SystemSetting::all()->pluck('value', 'key');
+        $shiftStartTime = $settings['shift_start_time'] ?? '09:30:00';
+
         // Status determination
         $status = 'present';
         if ($isWfh) {
             $status = 'half_day';
-        } elseif (Carbon::now()->format('H:i:s') > '09:30:00') {
+        } elseif (Carbon::now()->format('H:i:s') > $shiftStartTime) {
             $status = 'late';
         }
 
@@ -222,14 +228,24 @@ class AttendanceController extends Controller
             }
         }
 
+        $settings = \App\Models\SystemSetting::all()->pluck('value', 'key');
+        $shiftEndTime = $settings['shift_end_time'] ?? '18:30:00';
+
         $attendance->update([
             'clock_out'    => Carbon::now()->format('H:i:s'),
             'clock_out_ip' => $request->ip(),
             'out_lat'      => $lat ?: null,
             'out_lng'      => $lng ?: null,
         ]);
+        
+        $msg = '👋 Clocked out successfully.';
+        if (Carbon::now()->format('H:i:s') < $shiftEndTime) {
+            $msg = '⚠️ Clocked out early. Status has been flagged.';
+            // Enforcing half_day dynamically as requested
+            $attendance->update(['status' => 'half_day']);
+        }
 
-        return redirect()->back()->with('success', '👋 Clocked out successfully.');
+        return redirect()->back()->with('success', $msg);
     }
 
     public function update(Request $request, Attendance $attendance)
@@ -312,50 +328,127 @@ class AttendanceController extends Controller
 
         $callback = function () use ($month, $year) {
             $file = fopen('php://output', 'w');
-            fputcsv($file, ['Employee ID', 'Employee Name', 'Email', 'Total Working Days', 'Present Days', 'Absent Days']);
+            fputcsv($file, ['Employee ID', 'Employee Name', 'Email', 'Total Month Days', 'Total Working Days', 'Weekends (Sat/Sun)', 'Holidays', 'Present Days', 'Approved Leaves', 'Absent Days', 'WFH / Half Days', 'Late Days']);
 
             $employees = \App\Models\User::whereDoesntHave('roles', fn($q) => $q->whereIn('name', ['Super Admin', 'Admin']))->get();
+            
+            $startDate = Carbon::createFromDate($year, $month, 1);
+            $endDate = $startDate->copy()->endOfMonth();
+
+            $monthlyHolidays = \App\Models\Holiday::whereMonth('date', $month)
+                ->whereYear('date', $year)
+                ->get()
+                ->pluck('date')
+                ->map(fn($d) => Carbon::parse($d)->toDateString())
+                ->toArray();
 
             foreach ($employees as $employee) {
-                $startDate = Carbon::createFromDate($year, $month, 1);
-                $endDate = $startDate->copy()->endOfMonth();
-
                 $monthAttendance = Attendance::where('user_id', $employee->id)
                     ->whereMonth('date', $month)
                     ->whereYear('date', $year)
                     ->get()
                     ->keyBy('date');
 
-                $totalWorkingDays = 0;
-                $actuallyPresent = 0;
+                $monthlyLeaves = \App\Models\LeaveRequest::where('user_id', $employee->id)
+                    ->where('status', 'approved')
+                    ->where(function ($q) use ($startDate, $endDate) {
+                        $q->whereBetween('from_date', [$startDate, $endDate])
+                          ->orWhereBetween('to_date', [$startDate, $endDate])
+                          ->orWhere(function ($q2) use ($startDate, $endDate) {
+                              $q2->where('from_date', '<', $startDate)
+                                 ->where('to_date', '>', $endDate);
+                          });
+                    })->get();
+
+                $monthDays = $startDate->daysInMonth;
+                $workingDays = 0;
+                $weekends = 0;
+                $holidays = 0;
+                $present = 0;
+                $absent = 0;
+                $halfDays = 0; // WFH or Half Day
+                $late = 0;
+                $leaveDays = 0;
 
                 for ($date = $startDate->copy(); $date <= $endDate; $date->addDay()) {
                     $dateStr = $date->toDateString();
-                    $isHoliday = $this->holidayService->isHoliday($date);
-                    $isWeekend = $date->isSaturday() || $date->isSunday();
-
-                    if (!$isHoliday) {
-                        $totalWorkingDays++;
-                        if (isset($monthAttendance[$dateStr]) && in_array($monthAttendance[$dateStr]->status, ['present', 'late'])) {
-                            $actuallyPresent++;
-                        } elseif (isset($monthAttendance[$dateStr]) && in_array($monthAttendance[$dateStr]->status, ['half_day', 'half-day'])) {
-                            $actuallyPresent += 0.5;
+                    
+                    $isWeekend = false;
+                    if ($date->isSunday()) {
+                        $isWeekend = true;
+                    } elseif ($date->isSaturday()) {
+                        $satNum = ceil($date->day / 7);
+                        if ($satNum == 2 || $satNum == 4) {
+                            $isWeekend = true;
                         }
-                    } else {
-                        if ($isWeekend) {
+                    }
+                    $isHolidayDB = in_array($dateStr, $monthlyHolidays);
+
+                    $isLeaveDate = false;
+                    foreach ($monthlyLeaves as $lReq) {
+                        if ($date->between($lReq->from_date, $lReq->to_date)) {
+                            $isLeaveDate = true;
+                            break;
+                        }
+                    }
+
+                    if ($isHolidayDB) {
+                        $holidays++;
+                    } elseif ($isWeekend) {
+                        $weekends++;
+                        
+                        // Sandwich Rule Check (Ignore if Weekend is already covered by Leave)
+                        if (!$isLeaveDate) {
                             $friday = $date->copy()->previous(Carbon::FRIDAY);
                             $monday = $date->copy()->next(Carbon::MONDAY);
                             $frAttendance = $monthAttendance[$friday->toDateString()] ?? null;
                             $moAttendance = $monthAttendance[$monday->toDateString()] ?? null;
-                            if ($frAttendance && !in_array($frAttendance->status, ['present', 'late']) && $moAttendance && !in_array($moAttendance->status, ['present', 'late'])) {
-                                // Sandwich
-                            } else {
-                                $actuallyPresent++;
+                            
+                            $fridayLeave = false;
+                            $mondayLeave = false;
+                            foreach ($monthlyLeaves as $l) {
+                                if ($friday->between($l->from_date, $l->to_date)) $fridayLeave = true;
+                                if ($monday->between($l->from_date, $l->to_date)) $mondayLeave = true;
                             }
-                            $totalWorkingDays++;
+
+                            $isFridayAbsent = (!$frAttendance || $frAttendance->status === 'absent') && !$fridayLeave;
+                            $isMondayAbsent = (!$moAttendance || $moAttendance->status === 'absent') && !$mondayLeave;
+
+                            if ($isFridayAbsent && $isMondayAbsent) {
+                                $absent++; // Weekend becomes absent due to sandwich rule
+                            }
+                        }
+                    } elseif ($isHolidayDB) {
+                        $holidays++;
+                    } else {
+                        $workingDays++;
+                        
+                        $attendance = $monthAttendance[$dateStr] ?? null;
+                        if ($attendance) {
+                            if ($attendance->status === 'present') {
+                                $present++;
+                            } elseif ($attendance->status === 'late') {
+                                $present++;
+                                $late++;
+                            } elseif (in_array($attendance->status, ['half_day', 'half-day'])) {
+                                $present += 0.5;
+                                $absent += 0.5; // Half Day / WFH logic
+                                $halfDays++;
+                            } elseif ($attendance->status === 'absent') {
+                                if ($isLeaveDate) {
+                                    $leaveDays++;
+                                } else {
+                                    $absent++;
+                                }
+                            }
                         } else {
-                            $actuallyPresent++;
-                            $totalWorkingDays++;
+                            if ($date->startOfDay()->lte(now()->startOfDay())) {
+                                if ($isLeaveDate) {
+                                    $leaveDays++;
+                                } else {
+                                    $absent++;
+                                }
+                            }
                         }
                     }
                 }
@@ -364,9 +457,15 @@ class AttendanceController extends Controller
                     $employee->id,
                     $employee->name,
                     $employee->email,
-                    $totalWorkingDays,
-                    $actuallyPresent,
-                    max(0, $totalWorkingDays - $actuallyPresent)
+                    $monthDays,
+                    $workingDays,
+                    $weekends,
+                    $holidays,
+                    $present,
+                    $leaveDays,
+                    $absent,
+                    $halfDays,
+                    $late
                 ]);
             }
             fclose($file);
@@ -454,13 +553,17 @@ class AttendanceController extends Controller
         // Always send employees list so dropown always works
         $employees = User::orderBy('name')->get(['id', 'name']);
 
+        $settings = \App\Models\SystemSetting::all()->pluck('value', 'key');
+
         return Inertia::render('Attendance/Calendar', [
             'attendanceData' => $attendanceData,
             'month' => $month,
             'year' => $year,
             'holidays' => $holidays,
             'employees' => $employees,
-            'selectedEmployeeId' => (int) $employee_id
+            'selectedEmployeeId' => (int) $employee_id,
+            'shiftStartTime' => $settings['shift_start_time'] ?? '09:00:00',
+            'shiftEndTime' => $settings['shift_end_time'] ?? '18:00:00',
         ]);
     }
 
@@ -480,56 +583,120 @@ class AttendanceController extends Controller
         $month = $request->month ?? now()->month;
         $year = $request->year ?? now()->year;
 
+        $startDate = Carbon::createFromDate($year, $month, 1);
+        $endDate = $startDate->copy()->endOfMonth();
+        
+        $monthlyHolidays = \App\Models\Holiday::whereMonth('date', $month)
+            ->whereYear('date', $year)
+            ->get()
+            ->pluck('date')
+            ->map(fn($d) => Carbon::parse($d)->toDateString())
+            ->toArray();
+
         $employees = User::whereDoesntHave('roles', fn($q) => $q->whereIn('name', ['Super Admin', 'Admin']))->paginate(3)->withQueryString();
-        $reportData = $employees->getCollection()->map(function ($employee) use ($month, $year) {
-            $startDate = Carbon::createFromDate($year, $month, 1);
-            $endDate = $startDate->copy()->endOfMonth();
-            
-            $presentDays = [];
-            $absentDays = [];
-            
-            // Get all attendance for the month
+        $reportData = $employees->getCollection()->map(function ($employee) use ($month, $year, $startDate, $endDate, $monthlyHolidays) {
+                
             $monthAttendance = Attendance::where('user_id', $employee->id)
                 ->whereMonth('date', $month)
                 ->whereYear('date', $year)
                 ->get()
                 ->keyBy('date');
 
-            $totalWorkingDays = 0;
-            $actuallyPresent = 0;
+            $monthlyLeaves = \App\Models\LeaveRequest::where('user_id', $employee->id)
+                ->where('status', 'approved')
+                ->where(function ($q) use ($startDate, $endDate) {
+                    $q->whereBetween('from_date', [$startDate, $endDate])
+                      ->orWhereBetween('to_date', [$startDate, $endDate])
+                      ->orWhere(function ($q2) use ($startDate, $endDate) {
+                          $q2->where('from_date', '<', $startDate)
+                             ->where('to_date', '>', $endDate);
+                      });
+                })->get();
+
+            $monthDays = $startDate->daysInMonth;
+            $workingDays = 0;
+            $weekends = 0;
+            $holidays = 0;
+            $present = 0;
+            $absent = 0;
+            $leaveDays = 0;
+            $halfDays = 0;
 
             for ($date = $startDate->copy(); $date <= $endDate; $date->addDay()) {
                 $dateStr = $date->toDateString();
-                $isHoliday = $this->holidayService->isHoliday($date);
-                $isWeekend = $date->isSaturday() || $date->isSunday();
-                
-                if (!$isHoliday) {
-                    $totalWorkingDays++;
-                    if (isset($monthAttendance[$dateStr]) && $monthAttendance[$dateStr]->status === 'present') {
-                        $actuallyPresent++;
+
+                $isWeekend = false;
+                if ($date->isSunday()) {
+                    $isWeekend = true;
+                } elseif ($date->isSaturday()) {
+                    $satNum = ceil($date->day / 7);
+                    if ($satNum == 2 || $satNum == 4) {
+                        $isWeekend = true;
                     }
-                } else {
-                    // It's a holiday/weekend. Check Sandwich Rule.
-                    if ($isWeekend) {
-                        // Check previous Friday (or last working day) and next Monday (or next working day)
+                }
+                $isHolidayDB = in_array($dateStr, $monthlyHolidays);
+
+                $isLeaveDate = false;
+                foreach ($monthlyLeaves as $lReq) {
+                    if ($date->between($lReq->from_date, $lReq->to_date)) {
+                        $isLeaveDate = true;
+                        break;
+                    }
+                }
+
+                if ($isHolidayDB) {
+                    $holidays++;
+                } elseif ($isWeekend) {
+                    $weekends++;
+                    // Sandwich Rule Check
+                    if (!$isLeaveDate) {
                         $friday = $date->copy()->previous(Carbon::FRIDAY);
                         $monday = $date->copy()->next(Carbon::MONDAY);
-                        
                         $frAttendance = $monthAttendance[$friday->toDateString()] ?? null;
                         $moAttendance = $monthAttendance[$monday->toDateString()] ?? null;
                         
-                        // Sandwich Rule: If both Friday and Monday are NOT 'present', this weekend is ABSENT.
-                        // Otherwise, weekends are generally 'present' (Paid Off).
-                        if ($frAttendance && $frAttendance->status !== 'present' && $moAttendance && $moAttendance->status !== 'present') {
-                            // Sandwich caught! Don't add to present count.
-                        } else {
-                            $actuallyPresent++; // Paid weekend
+                        $fridayLeave = false;
+                        $mondayLeave = false;
+                        foreach ($monthlyLeaves as $l) {
+                            if ($friday->between($l->from_date, $l->to_date)) $fridayLeave = true;
+                            if ($monday->between($l->from_date, $l->to_date)) $mondayLeave = true;
                         }
-                        $totalWorkingDays++; // Paid weekends count towards total month days in some systems, or stay as is.
+
+                        $isFridayAbsent = (!$frAttendance || $frAttendance->status === 'absent') && !$fridayLeave;
+                        $isMondayAbsent = (!$moAttendance || $moAttendance->status === 'absent') && !$mondayLeave;
+
+                        if ($isFridayAbsent && $isMondayAbsent) {
+                            $absent++; // Sandwich rule absent
+                        }
+                    }
+                } elseif ($isHolidayDB) {
+                    $holidays++;
+                } else {
+                    $workingDays++;
+                    
+                    $attendance = $monthAttendance[$dateStr] ?? null;
+                    if ($attendance) {
+                        if (in_array($attendance->status, ['present', 'late'])) {
+                            $present++;
+                        } elseif (in_array($attendance->status, ['half_day', 'half-day'])) {
+                            $present += 0.5;
+                            $absent += 0.5; // Half Day logic
+                            $halfDays++;
+                        } elseif ($attendance->status === 'absent') {
+                            if ($isLeaveDate) {
+                                $leaveDays++;
+                            } else {
+                                $absent++;
+                            }
+                        }
                     } else {
-                        // Official Holiday (Festivals etc) - counts as Present
-                        $actuallyPresent++;
-                        $totalWorkingDays++;
+                        if ($date->startOfDay()->lte(now()->startOfDay())) {
+                            if ($isLeaveDate) {
+                                $leaveDays++;
+                            } else {
+                                $absent++;
+                            }
+                        }
                     }
                 }
             }
@@ -537,9 +704,14 @@ class AttendanceController extends Controller
             return [
                 'employee' => $employee->name,
                 'email' => $employee->email,
-                'present_days' => $actuallyPresent,
-                'working_days' => $totalWorkingDays,
-                'absent_days' => max(0, $totalWorkingDays - $actuallyPresent),
+                'month_days' => $monthDays,
+                'working_days' => $workingDays,
+                'weekends' => $weekends,
+                'holidays' => $holidays,
+                'present_days' => $present,
+                'absent_days' => $absent,
+                'leave_days' => $leaveDays,
+                'half_days' => $halfDays,
             ];
         });
 

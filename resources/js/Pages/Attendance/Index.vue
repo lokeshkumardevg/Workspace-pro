@@ -11,8 +11,9 @@ const props = defineProps({
     attendances: Object,
     todayAttendance: Object,
     isTodayHoliday: Boolean,
-    filters: Object,
     officeLocation: Object,
+    shiftStartTime: String,
+    shiftEndTime: String,
 });
 
 const page = usePage();
@@ -390,11 +391,11 @@ const deleteAttendance = (attendanceId) => {
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Clock In (HH:MM:SS)</label>
-                            <input v-model="editForm.clock_in" type="text" class="w-full bg-gray-50 border-gray-100 rounded-2xl focus:ring-[#2CA01C] focus:border-[#2CA01C] text-sm font-bold shadow-inner" placeholder="09:00:00" />
+                            <input v-model="editForm.clock_in" type="text" class="w-full bg-gray-50 border-gray-100 rounded-2xl focus:ring-[#2CA01C] focus:border-[#2CA01C] text-sm font-bold shadow-inner" :placeholder="shiftStartTime || '09:00:00'" />
                         </div>
                         <div>
                             <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Clock Out (HH:MM:SS)</label>
-                            <input v-model="editForm.clock_out" type="text" class="w-full bg-gray-50 border-gray-100 rounded-2xl focus:ring-[#2CA01C] focus:border-[#2CA01C] text-sm font-bold shadow-inner" placeholder="18:00:00" />
+                            <input v-model="editForm.clock_out" type="text" class="w-full bg-gray-50 border-gray-100 rounded-2xl focus:ring-[#2CA01C] focus:border-[#2CA01C] text-sm font-bold shadow-inner" :placeholder="shiftEndTime || '18:00:00'" />
                         </div>
                     </div>
 

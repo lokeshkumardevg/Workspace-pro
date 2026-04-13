@@ -24,6 +24,8 @@ class SettingsController extends Controller
                 'office_lat' => '28.61314773529335',
                 'office_lng' => '77.38732458230429',
                 'office_radius' => '200',
+                'shift_start_time' => '09:30:00',
+                'shift_end_time' => '18:30:00',
             ];
         }
 

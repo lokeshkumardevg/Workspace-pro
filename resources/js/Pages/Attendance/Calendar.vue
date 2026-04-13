@@ -10,7 +10,9 @@ const props = defineProps({
     year: Number,
     holidays: Array,
     employees: Array,
-    selectedEmployeeId: Number
+    selectedEmployeeId: Number,
+    shiftStartTime: String,
+    shiftEndTime: String
 });
 
 const page = usePage();
@@ -72,8 +74,8 @@ const openDayModal = (day) => {
         attendanceForm.clock_out = day.attendance.clock_out || '';
         attendanceForm.status    = day.attendance.status;
     } else {
-        attendanceForm.clock_in  = '09:00:00';
-        attendanceForm.clock_out = '18:00:00';
+        attendanceForm.clock_in  = props.shiftStartTime || '09:00:00';
+        attendanceForm.clock_out = props.shiftEndTime || '18:00:00';
         attendanceForm.status    = 'present';
     }
     showModal.value = true;
@@ -205,12 +207,12 @@ const deleteRecord   = (id) => confirm('Delete this record?') && router.delete(r
                     <div class="grid grid-cols-2 gap-5">
                         <div>
                             <label class="block text-[10px] font-black uppercase text-gray-400 mb-2">Clock In</label>
-                            <input v-model="attendanceForm.clock_in" type="text" placeholder="09:00:00"
+                            <input v-model="attendanceForm.clock_in" type="text" :placeholder="shiftStartTime || '09:00:00'"
                                    class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm font-bold text-center focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 outline-none" />
                         </div>
                         <div>
                             <label class="block text-[10px] font-black uppercase text-gray-400 mb-2">Clock Out</label>
-                            <input v-model="attendanceForm.clock_out" type="text" placeholder="18:00:00"
+                            <input v-model="attendanceForm.clock_out" type="text" :placeholder="shiftEndTime || '18:00:00'"
                                    class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm font-bold text-center focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 outline-none" />
                         </div>
                     </div>

@@ -21,6 +21,8 @@ const form = useForm({
         office_lat: props.settings.office_lat || '28.61314773529335',
         office_lng: props.settings.office_lng || '77.38732458230429',
         office_radius: props.settings.office_radius || '200',
+        shift_start_time: props.settings.shift_start_time || '09:30',
+        shift_end_time: props.settings.shift_end_time || '18:30',
     }
 });
 
@@ -139,6 +141,14 @@ const saveSettings = () => {
                             <div>
                                 <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Exchange Currency (ISO)</label>
                                 <input v-model="form.settings.currency" type="text" placeholder="INR, USD, EUR..." class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner py-4 transition-all uppercase" />
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Shift Start Time (Late threshold)</label>
+                                <input v-model="form.settings.shift_start_time" type="time" step="2" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner py-4 transition-all" />
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Shift End Time (Early Checkout)</label>
+                                <input v-model="form.settings.shift_end_time" type="time" step="2" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner py-4 transition-all" />
                             </div>
                         </div>
                     </div>
