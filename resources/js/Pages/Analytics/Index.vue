@@ -6,7 +6,8 @@ const props = defineProps({
     taskStats: Array,
     topPerformers: Array,
     projectHealth: Array,
-    attendanceTrend: Array
+    attendanceTrend: Array,
+    allEmployeesPerformance: Array
 });
 
 const getStatusColor = (status) => {
@@ -93,6 +94,52 @@ const getStatusColor = (status) => {
                                 <p class="text-[9px] text-gray-400 font-bold uppercase mt-3 tracking-widest">{{ proj.completed }} / {{ proj.tasks_count }} Tasks Done</p>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Company Wide Performance (All Employees) -->
+                <div v-if="$page.props.auth.user.roles.includes('Super Admin')" class="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm mt-8">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-sm font-black text-gray-400 uppercase tracking-widest">Company Wide Activity Tracker</h3>
+                        <a :href="route('analytics.export')" target="_blank"
+                            class="bg-[#2CA01C] hover:bg-[#238016] text-white px-5 py-2.5 rounded-xl font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-2 text-[11px] uppercase whitespace-nowrap active:scale-95">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-3 3m0 0l-3-3m3 3V4" /></svg>
+                            Download Global Report
+                        </a>
+                    </div>
+                    <div class="overflow-x-auto rounded-2xl border border-gray-100">
+                        <table class="w-full text-sm text-left">
+                            <thead class="text-[10px] text-gray-400 uppercase bg-gray-50 border-b border-gray-100 font-black tracking-widest">
+                                <tr>
+                                    <th class="px-6 py-4">Employee Name</th>
+                                    <th class="px-6 py-4 text-center">Total Assigned</th>
+                                    <th class="px-6 py-4 text-center">Completed</th>
+                                    <th class="px-6 py-4 text-center">Pending</th>
+                                    <th class="px-6 py-4 text-right">Completion Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="emp in allEmployeesPerformance" :key="emp.id" class="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                                    <td class="px-6 py-4 font-black uppercase text-gray-800 tracking-tight flex items-center gap-3">
+                                        <img :src="'https://ui-avatars.com/api/?name='+emp.name+'&background=random&color=fff'" class="w-8 h-8 rounded-full border-2 border-white shadow-sm" />
+                                        {{ emp.name }}
+                                        <span class="text-[9px] text-gray-400 font-bold ml-1">{{ emp.designation || 'Staff' }}</span>
+                                    </td>
+                                    <td class="px-6 py-4 font-bold text-center text-gray-500">{{ emp.total_assigned }} Tasks</td>
+                                    <td class="px-6 py-4 font-bold text-center text-emerald-600">{{ emp.completed_tasks }}</td>
+                                    <td class="px-6 py-4 font-bold text-center text-rose-500">{{ emp.pending_tasks }}</td>
+                                    <td class="px-6 py-4 text-right">
+                                        <span class="text-xs font-black p-2 rounded-xl"
+                                              :class="emp.completion_rate >= 70 ? 'bg-emerald-50 text-emerald-700' : (emp.completion_rate >= 40 ? 'bg-amber-50 text-amber-700' : 'bg-rose-50 text-rose-700')">
+                                            {{ emp.completion_rate }}%
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr v-if="!allEmployeesPerformance?.length">
+                                    <td colspan="5" class="px-6 py-8 text-center text-gray-400 font-bold italic tracking-wide text-xs">No employees found.</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 

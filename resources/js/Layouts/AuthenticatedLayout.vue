@@ -5,6 +5,7 @@ import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import NavLink from '@/Components/NavLink.vue';
 import Toast from '@/Components/Toast.vue';
+import AIBrain from '@/Components/AIBrain.vue';
 import { Link, router } from '@inertiajs/vue3';
 
 const showingNavigationDropdown = ref(false);
@@ -282,6 +283,9 @@ const markAllAsRead = () => {
                 <slot />
             </main>
         </div>
+
+        <!-- Global AI Assistant Widget -->
+        <AIBrain />
     </div>
 </template>
 

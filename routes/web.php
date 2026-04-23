@@ -131,6 +131,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/notifications/read-all', [\App\Http\Controllers\NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
 
     // Analytics
+    Route::get('/analytics/export', [\App\Http\Controllers\AnalyticsController::class, 'export'])->name('analytics.export');
     Route::get('/analytics', [\App\Http\Controllers\AnalyticsController::class, 'index'])->name('analytics.index');
 
     // Announcements
@@ -153,6 +154,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/payroll/{payroll}/send-slip', [\App\Http\Controllers\PayrollController::class, 'sendSlip'])->name('payroll.send-slip');
     Route::put('/payroll/{payroll}/status', [\App\Http\Controllers\PayrollController::class, 'updateStatus'])->name('payroll.status');
     Route::delete('/payroll/{payroll}', [\App\Http\Controllers\PayrollController::class, 'destroy'])->name('payroll.destroy');
+
+    // AI Chatbot
+    Route::post('/api/ai/chat', [\App\Http\Controllers\AIController::class, 'chat'])->name('ai.chat');
 });
 
 // Temporary debug route - check office config from DB
