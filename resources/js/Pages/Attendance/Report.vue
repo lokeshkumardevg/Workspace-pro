@@ -81,6 +81,7 @@ const applyFilter = () => {
                             { key: 'half_days', label: 'Half/WFH' },
                             { key: 'leave_days', label: 'Leaves' },
                             { key: 'absent_days', label: 'Absent' },
+                            { key: 'total_paid_days', label: 'Paid Days' },
                             { key: 'percentage', label: 'Score %' },
                             { key: 'actions', label: 'Details' }
                         ]"
@@ -117,6 +118,9 @@ const applyFilter = () => {
                                 <span class="px-3 py-1.5 rounded-xl bg-rose-50 text-rose-700 font-black text-[10px] uppercase shadow-sm border border-rose-100">
                                     {{ item.absent_days }}
                                 </span>
+                            </td>
+                            <td class="px-6 py-6 font-black text-indigo-600 uppercase tracking-widest text-sm">
+                                {{ item.total_paid_days }}
                             </td>
                             <td class="px-6 py-6 w-24">
                                 <div class="flex flex-col gap-2">

@@ -17,6 +17,7 @@ const props = defineProps({
 // ─── Modals ─────────────────────────────────────────────
 const showAutoModal   = ref(false);
 const showManualModal = ref(false);
+const showEditModal   = ref(false);
 const showSlipModal   = ref(false);
 const selectedPayroll = ref(null);
 
@@ -55,6 +56,34 @@ const submitManual = () => {
         onSuccess: () => { showManualModal.value = false; manualForm.reset(); }
     });
 };
+
+// ─── Edit Form ───────────────────────────────────────────
+const editForm = useForm({
+    base_salary: '',
+    deductions: 0,
+    bonuses: 0,
+});
+
+const openEditModal = (payroll) => {
+    selectedPayroll.value = payroll;
+    editForm.base_salary = payroll.base_salary;
+    editForm.deductions = payroll.deductions;
+    editForm.bonuses = payroll.bonuses;
+    showEditModal.value = true;
+};
+
+const submitEdit = () => {
+    editForm.put(route('payroll.update', selectedPayroll.value.id), {
+        onSuccess: () => { showEditModal.value = false; editForm.reset(); }
+    });
+};
+
+const editNetPreview = computed(() => {
+    const base = parseFloat(editForm.base_salary) || 0;
+    const bonus = parseFloat(editForm.bonuses) || 0;
+    const ded = parseFloat(editForm.deductions) || 0;
+    return base + bonus - ded;
+});
 
 // ─── Helpers ─────────────────────────────────────────────
 const months = [
@@ -98,6 +127,12 @@ const deletePayroll = (id) => {
 const viewSlip = (payroll) => {
     selectedPayroll.value = payroll;
     showSlipModal.value = true;
+};
+
+const emailSlip = (payroll) => {
+    if (confirm(`Are you sure you want to email the salary slip to ${payroll.user?.name}?`)) {
+        router.post(route('payroll.send-slip', payroll.id), {}, { preserveScroll: true });
+    }
 };
 
 const printSlip = () => window.print();
@@ -196,8 +231,9 @@ const companyLocation = computed(() => props.settings?.company_location || '');
                         </td>
                         <td class="px-6 py-6 whitespace-nowrap">
                             <div v-if="payroll.working_days > 0" class="space-y-0.5">
-                                <div class="text-[10px] font-black text-gray-700">{{ payroll.present_days }}<span class="text-gray-400 font-bold"> / {{ payroll.working_days }} Days</span></div>
-                                <div class="text-[9px] font-black text-rose-500 uppercase tracking-widest">LOP: {{ payroll.lop_days }} Days</div>
+                                <div class="text-[10px] font-black text-emerald-600">Payable: {{ payroll.present_days }} <span class="text-gray-400 font-bold">/ 30 Days</span></div>
+                                <div class="text-[9px] font-black text-rose-500 uppercase tracking-widest">Absent: {{ payroll.lop_days }}</div>
+                                <div v-if="payroll.lop_deduction > 0" class="text-[9px] font-black text-amber-500 uppercase tracking-widest">Unpaid Leaves: {{ payroll.lop_deduction }}</div>
                             </div>
                             <span v-else class="text-[9px] text-gray-300 italic font-bold">Manual</span>
                         </td>
@@ -225,13 +261,21 @@ const companyLocation = computed(() => props.settings?.company_location || '');
                         </td>
                         <td class="px-6 py-6 whitespace-nowrap">
                             <div class="flex items-center justify-end gap-2">
+                                <button v-if="canManage" @click="emailSlip(payroll)"
+                                    class="bg-amber-50 hover:bg-amber-600 hover:text-white text-amber-700 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border border-amber-100 active:scale-90">
+                                    Email
+                                </button>
                                 <button @click="viewSlip(payroll)"
                                     class="bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-700 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border border-indigo-100 active:scale-90">
-                                    Salary Slip
+                                    Slip
+                                </button>
+                                <button v-if="canManage" @click="openEditModal(payroll)"
+                                    class="bg-emerald-50 hover:bg-emerald-600 hover:text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border border-emerald-100 text-emerald-700 active:scale-90">
+                                    Edit
                                 </button>
                                 <button v-if="canManage" @click="deletePayroll(payroll.id)"
                                     class="bg-rose-50 hover:bg-rose-600 hover:text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border border-rose-100 text-rose-700 active:scale-90">
-                                    Delete
+                                    Del
                                 </button>
                             </div>
                         </td>
@@ -264,18 +308,7 @@ const companyLocation = computed(() => props.settings?.company_location || '');
                     <p v-if="autoForm.errors.user_id" class="text-rose-500 text-[10px] font-black mt-2 ml-1">{{ autoForm.errors.user_id }}</p>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Month</label>
-                        <select v-model="autoForm.month" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner py-3.5">
-                            <option v-for="m in months" :key="m.value" :value="m.value">{{ m.label }}</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Year</label>
-                        <input v-model="autoForm.year" type="number" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner py-3.5" min="2020" max="2030" />
-                    </div>
-                </div>
+                <!-- Month/Year automatically determined -->
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
@@ -309,18 +342,7 @@ const companyLocation = computed(() => props.settings?.company_location || '');
                     </select>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Month</label>
-                        <select v-model="manualForm.month" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner py-3.5">
-                            <option v-for="m in months" :key="m.value" :value="m.value">{{ m.label }}</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Year</label>
-                        <input v-model="manualForm.year" type="number" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner py-3.5" min="2020" max="2030" />
-                    </div>
-                </div>
+                <!-- Month/Year automatically determined -->
 
                 <div>
                     <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Base Salary (₹)</label>
@@ -348,6 +370,40 @@ const companyLocation = computed(() => props.settings?.company_location || '');
                     <button type="submit" :disabled="manualForm.processing"
                         class="px-12 py-3.5 bg-indigo-600 hover:bg-gray-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-100 active:scale-95 disabled:opacity-50">
                         {{ manualForm.processing ? 'Saving...' : 'Save Payroll' }}
+                    </button>
+                </div>
+            </form>
+        </Modal>
+
+        <!-- ───────── EDIT PAYROLL MODAL ───────── -->
+        <Modal :show="showEditModal" @close="showEditModal = false" title="Edit Payroll Record" maxWidth="xl">
+            <form @submit.prevent="submitEdit" class="space-y-6">
+                <div>
+                    <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Update Base Salary (₹)</label>
+                    <input v-model="editForm.base_salary" type="number" step="0.01" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-emerald-50 focus:border-emerald-500 text-sm font-black shadow-inner py-3.5" required min="0" placeholder="e.g. 25000" />
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Bonuses (₹) (e.g. Increment)</label>
+                        <input v-model="editForm.bonuses" type="number" step="0.01" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-emerald-50 focus:border-emerald-500 text-sm font-black shadow-inner py-3.5" min="0" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Total Deductions (₹)</label>
+                        <input v-model="editForm.deductions" type="number" step="0.01" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-emerald-50 focus:border-emerald-500 text-sm font-black shadow-inner py-3.5" min="0" />
+                    </div>
+                </div>
+
+                <div class="bg-emerald-50 rounded-2xl p-5 border border-emerald-100">
+                    <p class="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] mb-1">New Net Salary Preview</p>
+                    <p class="text-3xl font-black text-emerald-700">{{ formatCurrency(editNetPreview) }}</p>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-50">
+                    <button type="button" @click="showEditModal = false" class="px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-all">Cancel</button>
+                    <button type="submit" :disabled="editForm.processing"
+                        class="px-12 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-emerald-100 active:scale-95 disabled:opacity-50">
+                        {{ editForm.processing ? 'Updating...' : 'Update Record' }}
                     </button>
                 </div>
             </form>

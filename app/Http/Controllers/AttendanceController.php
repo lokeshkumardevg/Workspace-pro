@@ -328,7 +328,7 @@ class AttendanceController extends Controller
 
         $callback = function () use ($month, $year) {
             $file = fopen('php://output', 'w');
-            fputcsv($file, ['Employee ID', 'Employee Name', 'Email', 'Total Month Days', 'Total Working Days', 'Weekends (Sat/Sun)', 'Holidays', 'Present Days', 'Approved Leaves', 'Absent Days', 'WFH / Half Days', 'Late Days']);
+            fputcsv($file, ['Employee ID', 'Employee Name', 'Email', 'Total Month Days', 'Total Working Days', 'Weekends (Sat/Sun)', 'Holidays', 'Present Days', 'Approved Leaves', 'Absent Days', 'WFH / Half Days', 'Late Days', 'Total Paid Days']);
 
             $employees = \App\Models\User::whereDoesntHave('roles', fn($q) => $q->whereIn('name', ['Super Admin', 'Admin']))->get();
             
@@ -342,10 +342,12 @@ class AttendanceController extends Controller
                 ->map(fn($d) => Carbon::parse($d)->toDateString())
                 ->toArray();
 
+            $extendedStartDate = $startDate->copy()->subDays(5);
+            $extendedEndDate = $endDate->copy()->addDays(5);
+
             foreach ($employees as $employee) {
                 $monthAttendance = Attendance::where('user_id', $employee->id)
-                    ->whereMonth('date', $month)
-                    ->whereYear('date', $year)
+                    ->whereBetween('date', [$extendedStartDate->toDateString(), $extendedEndDate->toDateString()])
                     ->get()
                     ->keyBy('date');
 
@@ -369,6 +371,7 @@ class AttendanceController extends Controller
                 $halfDays = 0; // WFH or Half Day
                 $late = 0;
                 $leaveDays = 0;
+                $sandwichAbsent = 0;
 
                 for ($date = $startDate->copy(); $date <= $endDate; $date->addDay()) {
                     $dateStr = $date->toDateString();
@@ -416,6 +419,7 @@ class AttendanceController extends Controller
 
                             if ($isFridayAbsent && $isMondayAbsent) {
                                 $absent++; // Weekend becomes absent due to sandwich rule
+                                $sandwichAbsent++;
                             }
                         }
                     } elseif ($isHolidayDB) {
@@ -465,7 +469,8 @@ class AttendanceController extends Controller
                     $leaveDays,
                     $absent,
                     $halfDays,
-                    $late
+                    $late,
+                    ($present + $weekends + $holidays + $leaveDays - $sandwichAbsent)
                 ]);
             }
             fclose($file);
@@ -593,12 +598,14 @@ class AttendanceController extends Controller
             ->map(fn($d) => Carbon::parse($d)->toDateString())
             ->toArray();
 
+        $extendedStartDate = $startDate->copy()->subDays(5);
+        $extendedEndDate = $endDate->copy()->addDays(5);
+
         $employees = User::whereDoesntHave('roles', fn($q) => $q->whereIn('name', ['Super Admin', 'Admin']))->paginate(3)->withQueryString();
-        $reportData = $employees->getCollection()->map(function ($employee) use ($month, $year, $startDate, $endDate, $monthlyHolidays) {
+        $reportData = $employees->getCollection()->map(function ($employee) use ($month, $year, $startDate, $endDate, $monthlyHolidays, $extendedStartDate, $extendedEndDate) {
                 
             $monthAttendance = Attendance::where('user_id', $employee->id)
-                ->whereMonth('date', $month)
-                ->whereYear('date', $year)
+                ->whereBetween('date', [$extendedStartDate->toDateString(), $extendedEndDate->toDateString()])
                 ->get()
                 ->keyBy('date');
 
@@ -621,6 +628,7 @@ class AttendanceController extends Controller
             $absent = 0;
             $leaveDays = 0;
             $halfDays = 0;
+            $sandwichAbsent = 0;
 
             for ($date = $startDate->copy(); $date <= $endDate; $date->addDay()) {
                 $dateStr = $date->toDateString();
@@ -667,6 +675,7 @@ class AttendanceController extends Controller
 
                         if ($isFridayAbsent && $isMondayAbsent) {
                             $absent++; // Sandwich rule absent
+                            $sandwichAbsent++;
                         }
                     }
                 } elseif ($isHolidayDB) {
@@ -712,6 +721,7 @@ class AttendanceController extends Controller
                 'absent_days' => $absent,
                 'leave_days' => $leaveDays,
                 'half_days' => $halfDays,
+                'total_paid_days' => ($present + $weekends + $holidays + $leaveDays - $sandwichAbsent),
             ];
         });
 

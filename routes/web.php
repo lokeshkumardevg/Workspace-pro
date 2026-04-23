@@ -148,7 +148,9 @@ Route::middleware('auth')->group(function () {
     // Payroll
     Route::get('/payroll', [\App\Http\Controllers\PayrollController::class, 'index'])->name('payroll.index');
     Route::post('/payroll', [\App\Http\Controllers\PayrollController::class, 'store'])->name('payroll.store');
+    Route::put('/payroll/{payroll}', [\App\Http\Controllers\PayrollController::class, 'update'])->name('payroll.update');
     Route::post('/payroll/auto-generate', [\App\Http\Controllers\PayrollController::class, 'autoGenerate'])->name('payroll.auto-generate');
+    Route::post('/payroll/{payroll}/send-slip', [\App\Http\Controllers\PayrollController::class, 'sendSlip'])->name('payroll.send-slip');
     Route::put('/payroll/{payroll}/status', [\App\Http\Controllers\PayrollController::class, 'updateStatus'])->name('payroll.status');
     Route::delete('/payroll/{payroll}', [\App\Http\Controllers\PayrollController::class, 'destroy'])->name('payroll.destroy');
 });

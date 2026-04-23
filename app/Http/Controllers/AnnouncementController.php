@@ -46,14 +46,9 @@ class AnnouncementController extends Controller
         ]);
 
         try {
-            $users = \App\Models\User::pluck('email')->filter()->toArray();
-            if (!empty($users)) {
-                $title = $request->input('title');
-                $content = $request->input('content');
-                \Illuminate\Support\Facades\Mail::raw("A new announcement has been posted:\n\nTitle: {$title}\n\n{$content}", function ($message) use ($users, $title) {
-                    $message->bcc($users)
-                        ->subject('New Announcement: ' . $title);
-                });
+            $users = \App\Models\User::all();
+            if ($users->isNotEmpty()) {
+                \Illuminate\Support\Facades\Notification::send($users, new \App\Notifications\AnnouncementNotification($announcement));
             }
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('Failed to send announcement email: ' . $e->getMessage());

@@ -17,8 +17,8 @@ class TaskController extends Controller
     {
         $user = $request->user();
         // Check for specific roles or the 'manage tasks' permission
-        $isPrivileged = $user->hasPermissionTo('view tasks') || 
-                        $user->roles->whereIn('name', ['Super Admin', 'Admin', 'HR', 'manager', 'team lead', 'Manager', 'Team Lead'])->count() > 0;
+        $isPrivileged = $user->hasPermissionTo('view tasks') ||
+            $user->roles->whereIn('name', ['Super Admin', 'Admin', 'HR', 'manager', 'team lead', 'Manager', 'Team Lead'])->count() > 0;
 
         $tasksQuery = Task::with('project', 'assignee', 'creator', 'comments.user');
 
@@ -35,9 +35,9 @@ class TaskController extends Controller
         if ($isPrivileged && $request->employee_id) {
             $tasksQuery->where('assigned_to', $request->employee_id);
         } else {
-            $tasksQuery->where(function($q) use ($user) {
+            $tasksQuery->where(function ($q) use ($user) {
                 $q->where('assigned_to', $user->id)
-                  ->orWhere('created_by', $user->id);
+                    ->orWhere('created_by', $user->id);
             });
         }
 
@@ -101,7 +101,7 @@ class TaskController extends Controller
 
         $callback = function () use ($tasks, $stats) {
             $file = fopen('php://output', 'w');
-            
+
             // Header Section
             fputcsv($file, ['TASK MANAGEMENT REPORT']);
             fputcsv($file, ['Report Period:', $stats['period']]);
@@ -137,7 +137,7 @@ class TaskController extends Controller
     protected function exportToDoc($tasks, $stats)
     {
         $filename = "tasks_report_" . date('Y-m-d') . ".doc";
-        
+
         $headers = [
             "Content-type" => "application/vnd.ms-word",
             "Content-Disposition" => "attachment; filename=$filename",
@@ -277,8 +277,8 @@ class TaskController extends Controller
     public function store(Request $request)
     {
         $user = $request->user();
-        $isPrivileged = $user->hasPermissionTo('create tasks') || 
-                        $user->roles->whereIn('name', ['Super Admin', 'Admin', 'HR', 'manager', 'team lead', 'Manager', 'Team Lead'])->count() > 0;
+        $isPrivileged = $user->hasPermissionTo('create tasks') ||
+            $user->roles->whereIn('name', ['Super Admin', 'Admin', 'HR', 'manager', 'team lead', 'Manager', 'Team Lead'])->count() > 0;
 
         $request->validate([
             'project_id' => 'required|exists:projects,id',
@@ -294,10 +294,11 @@ class TaskController extends Controller
         $titles = explode("\n", $request->title);
         $tasks = [];
 
-        \DB::transaction(function() use ($titles, $request, $user, $isPrivileged, &$tasks) {
+        \DB::transaction(function () use ($titles, $request, $user, $isPrivileged, &$tasks) {
             foreach ($titles as $rowTitle) {
                 $trimmedTitle = trim($rowTitle);
-                if (empty($trimmedTitle)) continue;
+                if (empty($trimmedTitle))
+                    continue;
 
                 $assignedTo = $request->assigned_to;
                 if (!$isPrivileged) {
@@ -322,12 +323,25 @@ class TaskController extends Controller
                     if ($assignee) {
                         try {
                             $assignee->notify(new \App\Notifications\TaskAssignedNotification($task));
-                        } catch (\Exception $e) { /* Ignore notification errors in bulk */ }
+                        } catch (\Exception $e) { /* Ignore notification errors in bulk */
+                        }
                     }
                 }
                 $tasks[] = $task;
             }
         });
+
+        try {
+            $taskCount = count($tasks);
+            if ($taskCount > 0) {
+                \Illuminate\Support\Facades\Mail::raw("{$user->name} has created {$taskCount} new task(s).", function ($message) use ($user) {
+                    $message->to(['dev.clientg@gmail.com', 'chris@wheedletechnologies.ai'])
+                        ->subject("New Tasks Created by {$user->name}");
+                });
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to send task creation email: ' . $e->getMessage());
+        }
 
         return redirect()->back()->with('success', count($tasks) . ' Task(s) created successfully.');
     }
@@ -335,14 +349,14 @@ class TaskController extends Controller
     public function update(Request $request, Task $task)
     {
         $user = $request->user();
-        
+
         // Only creator can edit
         if ($task->created_by !== $user->id) {
             abort(403, 'Only the creator can edit this task.');
         }
 
-        $isPrivileged = $user->hasPermissionTo('edit tasks') || 
-                        $user->roles->whereIn('name', ['Super Admin', 'Admin', 'HR', 'manager', 'team lead', 'Manager', 'Team Lead'])->count() > 0;
+        $isPrivileged = $user->hasPermissionTo('edit tasks') ||
+            $user->roles->whereIn('name', ['Super Admin', 'Admin', 'HR', 'manager', 'team lead', 'Manager', 'Team Lead'])->count() > 0;
 
         $request->validate([
             'project_id' => 'required|exists:projects,id',
@@ -378,7 +392,7 @@ class TaskController extends Controller
             'status' => 'required|in:pending,in_progress,testing,completed',
             'time_spent' => 'nullable|string'
         ]);
-        
+
         $data = ['status' => $request->status];
 
         if ($request->status === 'in_progress' && !$task->started_at) {
@@ -387,15 +401,15 @@ class TaskController extends Controller
 
         if ($request->status === 'completed') {
             $data['completed_at'] = now();
-            
+
             if ($task->started_at) {
                 $start = \Carbon\Carbon::parse($task->started_at);
                 $end = now();
                 $diffInMinutes = $start->diffInMinutes($end);
-                
+
                 $hours = floor($diffInMinutes / 60);
                 $mins = $diffInMinutes % 60;
-                
+
                 if ($hours > 0) {
                     $data['time_spent'] = "{$hours}h {$mins}m";
                 } else {
@@ -408,14 +422,26 @@ class TaskController extends Controller
 
         $task->update($data);
 
+        if ($request->status === 'completed') {
+            try {
+                $authUser = $request->user();
+                \Illuminate\Support\Facades\Mail::raw("Task '{$task->title}' has been marked as completed by {$authUser->name}.", function ($message) use ($task) {
+                    $message->to(['dev.clientg@gmail.com', 'chris@wheedletechnologies.ai'])
+                        ->subject("Task Completed: {$task->title}");
+                });
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Failed to send task completion email: ' . $e->getMessage());
+            }
+        }
+
         return redirect()->back()->with('success', '✅ Task status updated. Performance metrics recalculated.');
     }
 
     public function reassign(Request $request, Task $task)
     {
         $user = $request->user();
-        $isPrivileged = $user->hasPermissionTo('edit tasks') || 
-                        $user->roles->whereIn('name', ['Super Admin', 'Admin', 'manager', 'team lead', 'Manager', 'Team Lead'])->count() > 0;
+        $isPrivileged = $user->hasPermissionTo('edit tasks') ||
+            $user->roles->whereIn('name', ['Super Admin', 'Admin', 'manager', 'team lead', 'Manager', 'Team Lead'])->count() > 0;
 
         if (!$isPrivileged) {
             abort(403);

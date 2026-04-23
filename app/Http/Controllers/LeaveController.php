@@ -49,9 +49,9 @@ class LeaveController extends Controller
         $leaves = $query->paginate(10)->withQueryString();
 
         return Inertia::render('Leaves/Index', [
-            'leaves'       => $leaves,
-            'stats'        => $stats,
-            'filters'      => $request->only('search', 'status'),
+            'leaves' => $leaves,
+            'stats' => $stats,
+            'filters' => $request->only('search', 'status'),
             'isPrivileged' => $isPrivileged,
         ]);
     }
@@ -104,7 +104,7 @@ class LeaveController extends Controller
 
         try {
             \Illuminate\Support\Facades\Mail::raw("A new leave request was submitted by {$user->name} from {$request->from_date} to {$request->to_date} for reason: {$request->reason}", function ($message) use ($user) {
-                $message->to(['hr@wheedletechonologies.ai', 'dev.clientg@gmail.com', 'chris@wheedletechnologies.ai'])
+                $message->to(['dev.clientg@gmail.com', 'chris@wheedletechnologies.ai'])
                     ->subject('New Leave Request from ' . $user->name);
             });
         } catch (\Exception $e) {
@@ -133,6 +133,13 @@ class LeaveController extends Controller
             'review_note' => $request->review_note,
         ]);
 
+        // Notify the employee about their leave status
+        try {
+            $leave->user->notify(new \App\Notifications\LeaveStatusNotification($leave));
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to send leave status email: ' . $e->getMessage());
+        }
+
         $msg = $request->action === 'approved'
             ? '✅ Leave request approved successfully!'
             : '❌ Leave request has been rejected.';
@@ -143,8 +150,8 @@ class LeaveController extends Controller
     public function downloadReport(Request $request)
     {
         $user = $request->user();
-        $isPrivileged = $user->hasPermissionTo('download reports') || 
-                        $user->roles->whereIn('name', ['Super Admin', 'Admin', 'HR', 'manager', 'team lead'])->count() > 0;
+        $isPrivileged = $user->hasPermissionTo('download reports') ||
+            $user->roles->whereIn('name', ['Super Admin', 'Admin', 'HR', 'manager', 'team lead'])->count() > 0;
 
         if (!$isPrivileged) {
             abort(403, 'Unauthorized');
