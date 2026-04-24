@@ -20,11 +20,12 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, \Illuminate\Http\Request $request) {
-            return redirect()->route('login')->with('error', 'Your session expired. Please log in again.');
+            return \Inertia\Inertia::location(route('login'));
         });
+        
         $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, \Illuminate\Http\Request $request) {
-            if ($request->isMethod('GET')) {
-                return redirect()->route('login')->with('error', 'Your session expired. Please log in again.');
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Unauthenticated.'], 401);
             }
             return \Inertia\Inertia::location(route('login'));
         });
