@@ -315,7 +315,7 @@ const formatDateTime = (d) => {
                         <div v-if="isPrivileged">
                             <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Employee View</label>
                             <select v-model="filter.employee_id" class="w-full bg-gray-50 border-gray-100 rounded-xl focus:ring-[#2CA01C] focus:border-[#2CA01C] text-sm font-bold transition-all shadow-inner">
-                                <option value="">My Performance</option>
+                                <option value="">All Tasks (Company Wide)</option>
                                 <option v-for="u in users" :key="u.id" :value="u.id">{{ u.name }}</option>
                             </select>
                         </div>

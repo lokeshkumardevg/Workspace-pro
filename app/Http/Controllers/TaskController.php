@@ -32,8 +32,11 @@ class TaskController extends Controller
 
         // Security: Stricter Privacy - Everyone sees only their own tasks (assigned to them)
         // OR tasks they created (to manage those they haven't assigned yet)
-        if ($isPrivileged && $request->employee_id) {
-            $tasksQuery->where('assigned_to', $request->employee_id);
+        if ($isPrivileged) {
+            if ($request->employee_id) {
+                $tasksQuery->where('assigned_to', $request->employee_id);
+            }
+            // If privileged and no employee_id is set, they see ALL tasks company-wide
         } else {
             $tasksQuery->where(function ($q) use ($user) {
                 $q->where('assigned_to', $user->id)
@@ -69,7 +72,12 @@ class TaskController extends Controller
 
         // Security: Employees only see their own tasks
         if (!$isPrivileged) {
-            $tasksQuery->where('assigned_to', $user->id);
+            $tasksQuery->where(function ($q) use ($user) {
+                $q->where('assigned_to', $user->id)
+                    ->orWhere('created_by', $user->id);
+            });
+        } elseif ($request->employee_id) {
+            $tasksQuery->where('assigned_to', $request->employee_id);
         }
 
         $tasks = $tasksQuery->get();
@@ -259,8 +267,8 @@ class TaskController extends Controller
             $assignedUser = User::find($request->employee_id);
             $label = $assignedUser ? "{$assignedUser->name}'s Performance" : "Performance";
         } else {
-            $perfQuery->where('assigned_to', $user->id);
-            $label = "My Performance";
+            // Company wide performance
+            $label = "Global Performance";
         }
 
         $total = (clone $perfQuery)->count();
