@@ -3,19 +3,19 @@
 namespace App\Notifications;
 
 use App\Models\Task;
-use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 class TaskAssignedNotification extends Notification
 {
-    use Queueable;
+    // Queueable REMOVED — fires synchronously, no queue worker needed
 
     private $task;
 
     public function __construct(Task $task)
     {
-        $this->task = $task;
+        // Eager load project to avoid null errors in toMail
+        $this->task = $task->loadMissing('project');
     }
 
     public function via($notifiable): array
@@ -30,7 +30,7 @@ class TaskAssignedNotification extends Notification
             ->greeting('Hello ' . $notifiable->name . ',')
             ->line('A new task has been assigned to you.')
             ->line('**Task:** ' . $this->task->title)
-            ->line('**Project:** ' . ($this->task->project->name ?? 'N/A'))
+            ->line('**Project:** ' . ($this->task->project?->name ?? 'N/A'))
             ->line('**Due Date:** ' . ($this->task->due_date ?? 'No deadline'))
             ->action('View Task', url('/tasks'))
             ->line('Please complete the task on time. Good luck!');
@@ -39,11 +39,11 @@ class TaskAssignedNotification extends Notification
     public function toArray($notifiable): array
     {
         return [
-            'task_id' => $this->task->id,
-            'title' => 'New Task: ' . $this->task->title,
-            'message' => 'You have been assigned to ' . $this->task->title,
-            'type' => 'task_assigned',
-            'action_url' => '/tasks'
+            'task_id'    => $this->task->id,
+            'title'      => 'New Task: ' . $this->task->title,
+            'message'    => 'You have been assigned to ' . $this->task->title,
+            'type'       => 'task_assigned',
+            'action_url' => '/tasks',
         ];
     }
 }

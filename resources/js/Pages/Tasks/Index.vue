@@ -19,7 +19,7 @@ const props = defineProps({
 
 const page = usePage();
 
-const isPrivileged = ref(page.props.auth.user.roles.some(r => ['Super Admin', 'Admin', 'HR', 'manager', 'team lead', 'Manager', 'Team Lead'].includes(r)));
+const isPrivileged = ref(page.props.auth.user.roles.some(r => ['Super Admin', 'Admin', 'super admin', 'admin', 'Superadmin', 'superadmin'].includes(r)));
 
 const filter = reactive({
     search: props.filters?.search || '',

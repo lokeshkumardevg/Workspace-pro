@@ -16,9 +16,8 @@ class TaskController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        // Check for specific roles or the 'manage tasks' permission
-        $isPrivileged = $user->hasPermissionTo('view tasks') ||
-            $user->roles->whereIn('name', ['Super Admin', 'Admin', 'HR', 'manager', 'team lead', 'Manager', 'Team Lead'])->count() > 0;
+        // Check for specific roles to be privileged (see everyone's tasks)
+        $isPrivileged = $user->roles->whereIn('name', ['Super Admin', 'Admin', 'super admin', 'admin', 'Superadmin', 'superadmin'])->count() > 0;
 
         $tasksQuery = Task::with('project', 'assignee', 'creator', 'comments.user');
 
@@ -65,7 +64,7 @@ class TaskController extends Controller
     public function export(Request $request)
     {
         $user = $request->user();
-        $isPrivileged = $user->roles->whereIn('name', ['Super Admin', 'Admin', 'HR', 'manager', 'team lead', 'Manager', 'Team Lead', 'admin', 'super admin', 'hr', 'superadmin', 'Superadmin'])->count() > 0;
+        $isPrivileged = $user->roles->whereIn('name', ['Super Admin', 'Admin', 'super admin', 'admin', 'Superadmin', 'superadmin'])->count() > 0;
 
         $tasksQuery = Task::with('project', 'assignee', 'creator');
         $this->applyFilters($tasksQuery, $request);
@@ -90,14 +89,14 @@ class TaskController extends Controller
             'user' => $user->name
         ];
 
-        if ($request->format === 'doc') {
+        if ($request->input('format') === 'doc') {
             return $this->exportToDoc($tasks, $stats);
         }
 
         return $this->exportToExcel($tasks, $stats);
     }
 
-    protected function exportToExcel($tasks, $stats)
+    public function exportToExcel($tasks, $stats)
     {
         $headers = [
             "Content-type" => "text/csv",
@@ -142,7 +141,7 @@ class TaskController extends Controller
         return Response::stream($callback, 200, $headers);
     }
 
-    protected function exportToDoc($tasks, $stats)
+    public function exportToDoc($tasks, $stats)
     {
         $filename = "tasks_report_" . date('Y-m-d') . ".doc";
 
@@ -285,8 +284,7 @@ class TaskController extends Controller
     public function store(Request $request)
     {
         $user = $request->user();
-        $isPrivileged = $user->hasPermissionTo('create tasks') ||
-            $user->roles->whereIn('name', ['Super Admin', 'Admin', 'HR', 'manager', 'team lead', 'Manager', 'Team Lead'])->count() > 0;
+        $isPrivileged = $user->roles->whereIn('name', ['Super Admin', 'Admin', 'super admin', 'admin', 'Superadmin', 'superadmin'])->count() > 0;
 
         $request->validate([
             'project_id' => 'required|exists:projects,id',
@@ -309,7 +307,7 @@ class TaskController extends Controller
                     continue;
 
                 $assignedTo = $request->assigned_to;
-                if (!$isPrivileged) {
+                if (!$isPrivileged || empty($assignedTo)) {
                     $assignedTo = $user->id;
                 }
 
@@ -325,30 +323,36 @@ class TaskController extends Controller
                     'time_spent' => $request->time_spent,
                 ]);
 
-                // Notify Assignee (Optional)
-                if ($assignedTo) {
-                    $assignee = User::find($assignedTo);
-                    if ($assignee) {
-                        try {
-                            $assignee->notify(new \App\Notifications\TaskAssignedNotification($task));
-                        } catch (\Exception $e) { /* Ignore notification errors in bulk */
-                        }
-                    }
-                }
                 $tasks[] = $task;
             }
         });
 
+        // Send notifications and admin mail outside the transaction
         try {
             $taskCount = count($tasks);
             if ($taskCount > 0) {
+                // 1. Send Admin Mail
                 \Illuminate\Support\Facades\Mail::raw("{$user->name} has created {$taskCount} new task(s).", function ($message) use ($user) {
                     $message->to(['dev.clientg@gmail.com', 'chris@wheedletechnologies.ai'])
                         ->subject("New Tasks Created by {$user->name}");
                 });
+
+                // 2. Notify Each Assignee
+                foreach ($tasks as $t) {
+                    if ($t->assigned_to) {
+                        $assignee = User::find($t->assigned_to);
+                        if ($assignee) {
+                            try {
+                                $assignee->notify(new \App\Notifications\TaskAssignedNotification($t));
+                            } catch (\Exception $e) {
+                                \Illuminate\Support\Facades\Log::error("Failed to notify assignee for task {$t->id}: " . $e->getMessage());
+                            }
+                        }
+                    }
+                }
             }
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Failed to send task creation email: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('General error in task creation notifications: ' . $e->getMessage());
         }
 
         return redirect()->back()->with('success', count($tasks) . ' Task(s) created successfully.');
@@ -363,8 +367,7 @@ class TaskController extends Controller
             abort(403, 'Only the creator can edit this task.');
         }
 
-        $isPrivileged = $user->hasPermissionTo('edit tasks') ||
-            $user->roles->whereIn('name', ['Super Admin', 'Admin', 'HR', 'manager', 'team lead', 'Manager', 'Team Lead'])->count() > 0;
+        $isPrivileged = $user->roles->whereIn('name', ['Super Admin', 'Admin', 'super admin', 'admin', 'Superadmin', 'superadmin'])->count() > 0;
 
         $request->validate([
             'project_id' => 'required|exists:projects,id',
@@ -377,9 +380,11 @@ class TaskController extends Controller
         ]);
 
         $assignedTo = $request->assigned_to;
-        if (!$isPrivileged) {
+        if (!$isPrivileged || empty($assignedTo)) {
             $assignedTo = $user->id;
         }
+
+        $oldAssigneeId = $task->assigned_to;
 
         $task->update([
             'project_id' => $request->project_id,
@@ -390,6 +395,18 @@ class TaskController extends Controller
             'priority' => $request->priority,
             'time_spent' => $request->time_spent,
         ]);
+
+        // Notify if assigned_to changed
+        if ($assignedTo && $assignedTo != $oldAssigneeId) {
+            $assignee = User::find($assignedTo);
+            if ($assignee) {
+                try {
+                    $assignee->notify(new \App\Notifications\TaskAssignedNotification($task));
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error('Failed to send update notification: ' . $e->getMessage());
+                }
+            }
+        }
 
         return redirect()->back()->with('success', '✅ Task updated successfully.');
     }
@@ -448,8 +465,7 @@ class TaskController extends Controller
     public function reassign(Request $request, Task $task)
     {
         $user = $request->user();
-        $isPrivileged = $user->hasPermissionTo('edit tasks') ||
-            $user->roles->whereIn('name', ['Super Admin', 'Admin', 'manager', 'team lead', 'Manager', 'Team Lead'])->count() > 0;
+        $isPrivileged = $user->roles->whereIn('name', ['Super Admin', 'Admin', 'super admin', 'admin', 'Superadmin', 'superadmin'])->count() > 0;
 
         if (!$isPrivileged) {
             abort(403);
