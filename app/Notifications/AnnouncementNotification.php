@@ -26,12 +26,14 @@ class AnnouncementNotification extends Notification
     public function toMail($notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('New Announcement: ' . $this->announcement->title)
-            ->greeting('Hello,')
-            ->line('A new announcement has been posted.')
-            ->line('**Title:** ' . $this->announcement->title)
+            ->subject('📢 New Announcement: ' . $this->announcement->title)
+            ->greeting('Hello ' . $notifiable->name . ',')
+            ->line('A new official announcement has been posted on the dashboard.')
+            ->panel(
+                "**" . $this->announcement->title . "**"
+            )
             ->line($this->announcement->content)
-            ->action('View Dashboard', url('/'))
-            ->line('Thank you!');
+            ->action('Open Dashboard', url('/'))
+            ->line('Stay updated and have a great day!');
     }
 }

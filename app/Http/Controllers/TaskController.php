@@ -327,27 +327,25 @@ class TaskController extends Controller
             }
         });
 
-        // Send notifications and admin mail outside the transaction
+        // Send notifications to assignees (which will BCC admins automatically)
         try {
             $taskCount = count($tasks);
             if ($taskCount > 0) {
-                // 1. Send Admin Mail
-                \Illuminate\Support\Facades\Mail::raw("{$user->name} has created {$taskCount} new task(s).", function ($message) use ($user) {
-                    $message->to(['dev.clientg@gmail.com', 'chris@wheedletechnologies.ai'])
-                        ->subject("New Tasks Created by {$user->name}");
-                });
-
-                // 2. Notify Each Assignee
+                // Notify Each Assignee (Admins receive a detailed BCC via Notification class)
                 foreach ($tasks as $t) {
-                    if ($t->assigned_to) {
-                        $assignee = User::find($t->assigned_to);
-                        if ($assignee) {
-                            try {
+                    try {
+                        if ($t->assigned_to) {
+                            $assignee = User::find($t->assigned_to);
+                            if ($assignee) {
                                 $assignee->notify(new \App\Notifications\TaskAssignedNotification($t));
-                            } catch (\Exception $e) {
-                                \Illuminate\Support\Facades\Log::error("Failed to notify assignee for task {$t->id}: " . $e->getMessage());
                             }
+                        } else {
+                            // On-demand notification for unassigned pool tasks
+                            \Illuminate\Support\Facades\Notification::route('mail', 'dev.clientg@gmail.com')
+                                ->notify(new \App\Notifications\TaskAssignedNotification($t));
                         }
+                    } catch (\Exception $e) {
+                        \Illuminate\Support\Facades\Log::error("Failed to notify task {$t->id}: " . $e->getMessage());
                     }
                 }
             }
@@ -397,14 +395,20 @@ class TaskController extends Controller
         ]);
 
         // Notify if assigned_to changed
-        if ($assignedTo && $assignedTo != $oldAssigneeId) {
-            $assignee = User::find($assignedTo);
-            if ($assignee) {
-                try {
-                    $assignee->notify(new \App\Notifications\TaskAssignedNotification($task));
-                } catch (\Exception $e) {
-                    \Illuminate\Support\Facades\Log::error('Failed to send update notification: ' . $e->getMessage());
+        if ($assignedTo != $oldAssigneeId) {
+            try {
+                if ($assignedTo) {
+                    $assignee = User::find($assignedTo);
+                    if ($assignee) {
+                        $assignee->notify(new \App\Notifications\TaskAssignedNotification($task));
+                    }
+                } else {
+                    // It was unassigned, notify admins directly
+                    \Illuminate\Support\Facades\Notification::route('mail', 'dev.clientg@gmail.com')
+                        ->notify(new \App\Notifications\TaskAssignedNotification($task));
                 }
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Failed to send update notification: ' . $e->getMessage());
             }
         }
 
@@ -450,12 +454,14 @@ class TaskController extends Controller
         if ($request->status === 'completed') {
             try {
                 $authUser = $request->user();
-                \Illuminate\Support\Facades\Mail::raw("Task '{$task->title}' has been marked as completed by {$authUser->name}.", function ($message) use ($task) {
-                    $message->to(['dev.clientg@gmail.com', 'chris@wheedletechnologies.ai'])
-                        ->subject("Task Completed: {$task->title}");
-                });
+                // Notify Admins about the completion in a beautiful template
+                \Illuminate\Support\Facades\Notification::route('mail', 'dev.clientg@gmail.com')
+                    ->notify(new \App\Notifications\TaskCompletedNotification($task, $authUser->name));
+                
+                // If there's an assigned user who isn't the one completing it, notify them too? 
+                // Usually admins just want to know. Added CC logic via BCC in Notification.
             } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error('Failed to send task completion email: ' . $e->getMessage());
+                \Illuminate\Support\Facades\Log::error('Failed to send task completion notification: ' . $e->getMessage());
             }
         }
 

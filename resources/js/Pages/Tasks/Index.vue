@@ -69,6 +69,7 @@ const form = useForm({
 
 const createTask = () => {
     form.post(route('tasks.store'), {
+        preserveScroll: true,
         onSuccess: () => {
             showCreateModal.value = false;
             form.reset();
@@ -814,8 +815,10 @@ const formatDateTime = (d) => {
                 </div>
 
                 <div class="flex items-center justify-end gap-4 pt-4">
-                    <button type="button" @click="showCreateModal = false" class="px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-all active:scale-95">Cancel</button>
-                    <button type="submit" :disabled="form.processing" class="px-12 py-3.5 bg-indigo-600 hover:bg-gray-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-100 active:scale-95">Save Task</button>
+                    <button type="button" @click="showCreateModal = false" :disabled="form.processing" class="px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-all active:scale-95 disabled:opacity-50">Cancel</button>
+                    <button type="submit" :disabled="form.processing" class="px-12 py-3.5 bg-indigo-600 hover:bg-gray-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-100 active:scale-95 disabled:opacity-50">
+                        {{ form.processing ? 'Saving...' : 'Save Task' }}
+                    </button>
                 </div>
             </form>
         </Modal>
@@ -866,8 +869,10 @@ const formatDateTime = (d) => {
                 </div>
 
                 <div class="flex items-center justify-end gap-4 pt-4">
-                    <button type="button" @click="showEditModal = false" class="px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-all active:scale-95">Cancel</button>
-                    <button type="submit" :disabled="editForm.processing" class="px-12 py-3.5 bg-indigo-600 hover:bg-gray-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-100 active:scale-95">Update Task</button>
+                    <button type="button" @click="showEditModal = false" :disabled="editForm.processing" class="px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-all active:scale-95 disabled:opacity-50">Cancel</button>
+                    <button type="submit" :disabled="editForm.processing" class="px-12 py-3.5 bg-indigo-600 hover:bg-gray-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-100 active:scale-95 disabled:opacity-50">
+                        {{ editForm.processing ? 'Updating...' : 'Update Task' }}
+                    </button>
                 </div>
             </form>
         </Modal>

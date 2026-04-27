@@ -28,21 +28,19 @@ class SalarySlipNotification extends Notification
         $monthName = date("F", mktime(0, 0, 0, $this->payroll->month, 10));
 
         return (new MailMessage)
-            ->subject("Salary Slip - {$monthName} {$this->payroll->year}")
+            ->subject("📄 Your Salary Slip for {$monthName} {$this->payroll->year}")
             ->greeting("Hello {$notifiable->name},")
-            ->line("Your automated Salary Slip for {$monthName} {$this->payroll->year} is attached below.")
-            ->line("---")
-            ->line("**Fixed Month Days:** {$this->payroll->working_days}")
-            ->line("**Absent Days:** {$this->payroll->lop_days}")
-            ->line("**Unpaid Leave Days:** {$this->payroll->lop_deduction}")
-            ->line("**Payable Days:** {$this->payroll->present_days}")
-            ->line("---")
-            ->line("**Base Monthly Salary:** ₹{$this->payroll->base_salary}")
-            ->line("**Bonuses:** ₹{$this->payroll->bonuses}")
-            ->line("**Deductions (PF/Tax/Extra):** ₹{$this->payroll->deductions}")
-            ->line("**Net Payable Salary:** ₹" . number_format($this->payroll->net_salary, 2))
-            ->line("---")
-            ->action('View details on Dashboard', url('/payroll'))
-            ->line('Thank you!');
+            ->line("We are pleased to inform you that your salary slip for the month of **{$monthName} {$this->payroll->year}** has been generated.")
+            ->panel(
+                "* **Payable Days:** {$this->payroll->present_days} / {$this->payroll->working_days} Days\n" .
+                "* **Deductions (LOP):** ₹{$this->payroll->lop_deduction}\n" .
+                "* **Net Payable Salary:** ₹" . number_format($this->payroll->net_salary, 2)
+            )
+            ->line("**Payroll Breakdown Summarized:**")
+            ->line("- **Base Salary:** ₹" . number_format($this->payroll->base_salary, 2))
+            ->line("- **Bonuses/Allowance:** ₹" . number_format($this->payroll->bonuses, 2))
+            ->line("- **General Deductions:** ₹" . number_format($this->payroll->deductions, 2))
+            ->action('View Payroll Dashboard', url('/payroll'))
+            ->line('Wishing you a productive month ahead!');
     }
 }

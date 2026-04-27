@@ -15,34 +15,50 @@ class AnalyticsController extends Controller
     public function index()
     {
         $user = auth()->user();
-        if (!$user->hasRole(['Super Admin', 'Admin', 'HR', 'Manager'])) {
-            abort(403);
-        }
+        $isPrivileged = $user->hasRole(['Super Admin', 'Admin', 'HR', 'Manager']);
 
         // 1. Task Distribution by Status
-        $taskStats = Task::select('status', DB::raw('count(*) as count'))
-            ->groupBy('status')
-            ->get();
+        $taskStatsQuery = Task::select('status', DB::raw('count(*) as count'))->groupBy('status');
+        if (!$isPrivileged) {
+            $taskStatsQuery->where('assigned_to', $user->id);
+        }
+        $taskStats = $taskStatsQuery->get();
 
         // 2. Top Performers (Most completed tasks this month)
-        $topPerformers = User::whereHas('roles', fn($q) => $q->where('name', 'Employee'))
-            ->withCount([
-                'tasks' => function ($q) {
-                    $q->where('status', 'completed')
-                        ->whereMonth('updated_at', now()->month);
-                }
-            ])
-            ->orderBy('tasks_count', 'desc')
-            ->limit(5)
-            ->get();
+        // Hidden from standard employees as per "no global visibility" rule.
+        $topPerformers = [];
+        if ($isPrivileged) {
+            $topPerformers = User::whereHas('roles', fn($q) => $q->where('name', 'Employee'))
+                ->withCount([
+                    'tasks' => function ($q) {
+                        $q->where('status', 'completed')
+                            ->whereMonth('updated_at', now()->month);
+                    }
+                ])
+                ->orderBy('tasks_count', 'desc')
+                ->limit(5)
+                ->get();
+        }
 
         // 3. Project Health (Completion Rate)
-        $projectHealth = Project::withCount([
-            'tasks',
-            'tasks as completed' => function ($q) {
+        $projectHealthQuery = Project::withCount([
+            'tasks' => function($q) use ($user, $isPrivileged) {
+                if (!$isPrivileged) $q->where('assigned_to', $user->id);
+            },
+            'tasks as completed' => function ($q) use ($user, $isPrivileged) {
                 $q->where('status', 'completed');
+                if (!$isPrivileged) $q->where('assigned_to', $user->id);
             }
-        ])->get()->map(function ($p) {
+        ]);
+        
+        // Hide projects with no tasks for this user
+        if (!$isPrivileged) {
+            $projectHealthQuery->whereHas('tasks', function($q) use ($user) {
+                $q->where('assigned_to', $user->id);
+            });
+        }
+        
+        $projectHealth = $projectHealthQuery->get()->map(function ($p) {
             $p->rate = $p->tasks_count > 0 ? round(($p->completed / $p->tasks_count) * 100) : 0;
             return $p;
         });
@@ -51,30 +67,37 @@ class AnalyticsController extends Controller
         $attendanceTrend = [];
         for ($i = 6; $i >= 0; $i--) {
             $date = now()->subDays($i)->format('Y-m-d');
+            $attQuery = Attendance::where('date', $date)->where('status', 'present');
+            if (!$isPrivileged) {
+                $attQuery->where('user_id', $user->id);
+            }
             $attendanceTrend[] = [
                 'date' => $date,
-                'count' => Attendance::where('date', $date)->where('status', 'present')->count()
+                'count' => $attQuery->count()
             ];
         }
 
         // 5. All Employees Performance Table (Detailed view for Super Admin report)
-        $allEmployeesPerformance = User::whereHas('roles', fn($q) => $q->whereIn('name', ['Employee', 'employee']))
-            ->withCount([
-                'tasks as total_assigned',
-                'tasks as completed_tasks' => function ($q) {
-                    $q->where('status', 'completed');
-                },
-                'tasks as pending_tasks' => function ($q) {
-                    $q->where('status', 'pending');
-                },
-                'tasks as in_progress_tasks' => function ($q) {
-                    $q->where('status', 'in_progress');
-                }
-            ])
-            ->get()->map(function ($u) {
-                $u->completion_rate = $u->total_assigned > 0 ? round(($u->completed_tasks / $u->total_assigned) * 100) : 0;
-                return $u;
-            });
+        $allEmployeesPerformance = [];
+        if ($isPrivileged) {
+            $allEmployeesPerformance = User::whereHas('roles', fn($q) => $q->whereIn('name', ['Employee', 'employee']))
+                ->withCount([
+                    'tasks as total_assigned',
+                    'tasks as completed_tasks' => function ($q) {
+                        $q->where('status', 'completed');
+                    },
+                    'tasks as pending_tasks' => function ($q) {
+                        $q->where('status', 'pending');
+                    },
+                    'tasks as in_progress_tasks' => function ($q) {
+                        $q->where('status', 'in_progress');
+                    }
+                ])
+                ->get()->map(function ($u) {
+                    $u->completion_rate = $u->total_assigned > 0 ? round(($u->completed_tasks / $u->total_assigned) * 100) : 0;
+                    return $u;
+                });
+        }
 
         return Inertia::render('Analytics/Index', [
             'taskStats' => $taskStats,

@@ -1,6 +1,6 @@
 <script setup>
 import { ref, watch, onMounted } from 'vue';
-import { usePage } from '@inertiajs/vue3';
+import { usePage, router } from '@inertiajs/vue3';
 
 const page = usePage();
 const toasts = ref([]);
@@ -56,12 +56,22 @@ function removeToast(id) {
     if (idx > -1) toasts.value.splice(idx, 1);
 }
 
-// Watch for flash messages from backend
-watch(() => page.props.flash, (flash) => {
-    if (flash?.success) addToast('success', flash.success);
-    if (flash?.error)   addToast('error',   flash.error);
-    if (flash?.info)    addToast('info',     flash.info);
-}, { immediate: true, deep: true });
+// Watch for flash messages using Inertia events to bypass Vue reactivity deduplication
+// of identical success messages (e.g., "1 Task created successfully" back-to-back)
+onMounted(() => {
+    // Check initial load
+    if (page.props.flash?.success) addToast('success', page.props.flash.success);
+    if (page.props.flash?.error)   addToast('error',   page.props.flash.error);
+    if (page.props.flash?.info)    addToast('info',    page.props.flash.info);
+    
+    // Listen to all subsequent visits
+    router.on('finish', () => {
+        const flash = page.props.flash;
+        if (flash?.success) addToast('success', flash.success);
+        if (flash?.error)   addToast('error',   flash.error);
+        if (flash?.info)    addToast('info',    flash.info);
+    });
+});
 
 // Expose for programmatic use
 defineExpose({ addToast });

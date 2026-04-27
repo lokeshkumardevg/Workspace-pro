@@ -26,15 +26,18 @@ class LeaveRequestNotification extends Notification
     public function toMail($notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('New Leave Request from ' . $this->leaveRequest->user->name)
+            ->subject('🌴 New Leave Request: ' . $this->leaveRequest->user->name)
             ->greeting('Hello ' . $notifiable->name . ',')
-            ->line('A new leave request has been submitted and is awaiting your review.')
-            ->line('**Employee:** ' . $this->leaveRequest->user->name)
-            ->line('**Leave Type:** ' . ucfirst($this->leaveRequest->type))
-            ->line('**Duration:** ' . \Carbon\Carbon::parse($this->leaveRequest->from_date)->format('d M') . ' to ' . \Carbon\Carbon::parse($this->leaveRequest->to_date)->format('d M') . ' (' . $this->leaveRequest->days . ' days)')
-            ->line('**Reason:** ' . $this->leaveRequest->reason)
-            ->action('Review Request', url('/leaves'))
-            ->line('Please review this request at your earliest convenience.');
+            ->line('An employee has submitted a new leave request for your review.')
+            ->panel(
+                "**Employee:** " . $this->leaveRequest->user->name . "\n" .
+                "**Type:** " . ucfirst($this->leaveRequest->type) . "\n" .
+                "**Period:** " . \Carbon\Carbon::parse($this->leaveRequest->from_date)->format('d M') . " - " . \Carbon\Carbon::parse($this->leaveRequest->to_date)->format('d M') . " ({$this->leaveRequest->days} days)"
+            )
+            ->line("**Reason for Leave:**")
+            ->line($this->leaveRequest->reason ?: 'No reason provided.')
+            ->action('Review & Decide', url('/leaves'))
+            ->line('Please take action on this request to ensure team planning remains smooth.');
     }
 
     public function toArray($notifiable): array
