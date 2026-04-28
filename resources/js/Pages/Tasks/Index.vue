@@ -65,6 +65,7 @@ const form = useForm({
     description: '',
     due_date: '',
     priority: 'medium',
+    time_spent: '',
 });
 
 const createTask = () => {

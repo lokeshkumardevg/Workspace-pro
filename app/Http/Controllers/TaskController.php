@@ -7,6 +7,8 @@ use App\Models\Project;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
 use Inertia\Inertia;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Response;
@@ -327,31 +329,26 @@ class TaskController extends Controller
             }
         });
 
-        // Send notifications to assignees (which will BCC admins automatically)
-        try {
-            $taskCount = count($tasks);
-            if ($taskCount > 0) {
-                // Notify Each Assignee (Admins receive a detailed BCC via Notification class)
-                foreach ($tasks as $t) {
-                    try {
-                        if ($t->assigned_to) {
-                            $assignee = User::find($t->assigned_to);
-                            if ($assignee) {
-                                $assignee->notify(new \App\Notifications\TaskAssignedNotification($t));
-                            }
-                        } else {
-                            // On-demand notification for unassigned pool tasks
-                            \Illuminate\Support\Facades\Notification::route('mail', 'dev.clientg@gmail.com')
-                                ->notify(new \App\Notifications\TaskAssignedNotification($t));
+        // Send notifications AFTER the response is sent (non-blocking)
+        $taskIds = collect($tasks)->pluck('id')->toArray();
+        dispatch(function () use ($taskIds) {
+            $tasksToNotify = Task::with('project', 'assignee', 'creator')->whereIn('id', $taskIds)->get();
+            foreach ($tasksToNotify as $t) {
+                try {
+                    if ($t->assigned_to) {
+                        $assignee = User::find($t->assigned_to);
+                        if ($assignee) {
+                            $assignee->notify(new \App\Notifications\TaskAssignedNotification($t));
                         }
-                    } catch (\Exception $e) {
-                        \Illuminate\Support\Facades\Log::error("Failed to notify task {$t->id}: " . $e->getMessage());
+                    } else {
+                        Notification::route('mail', 'dev.clientg@gmail.com')
+                            ->notify(new \App\Notifications\TaskAssignedNotification($t));
                     }
+                } catch (\Exception $e) {
+                    Log::error("Failed to notify task {$t->id}: " . $e->getMessage());
                 }
             }
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('General error in task creation notifications: ' . $e->getMessage());
-        }
+        })->afterResponse();
 
         return redirect()->back()->with('success', count($tasks) . ' Task(s) created successfully.');
     }
@@ -394,22 +391,27 @@ class TaskController extends Controller
             'time_spent' => $request->time_spent,
         ]);
 
-        // Notify if assigned_to changed
+        // Notify if assigned_to changed (non-blocking)
         if ($assignedTo != $oldAssigneeId) {
-            try {
-                if ($assignedTo) {
-                    $assignee = User::find($assignedTo);
-                    if ($assignee) {
-                        $assignee->notify(new \App\Notifications\TaskAssignedNotification($task));
+            $taskId = $task->id;
+            $newAssigneeId = $assignedTo;
+            dispatch(function () use ($taskId, $newAssigneeId) {
+                try {
+                    $freshTask = Task::with('project', 'assignee', 'creator')->find($taskId);
+                    if (!$freshTask) return;
+                    if ($newAssigneeId) {
+                        $assignee = User::find($newAssigneeId);
+                        if ($assignee) {
+                            $assignee->notify(new \App\Notifications\TaskAssignedNotification($freshTask));
+                        }
+                    } else {
+                        Notification::route('mail', 'dev.clientg@gmail.com')
+                            ->notify(new \App\Notifications\TaskAssignedNotification($freshTask));
                     }
-                } else {
-                    // It was unassigned, notify admins directly
-                    \Illuminate\Support\Facades\Notification::route('mail', 'dev.clientg@gmail.com')
-                        ->notify(new \App\Notifications\TaskAssignedNotification($task));
+                } catch (\Exception $e) {
+                    Log::error('Failed to send update notification: ' . $e->getMessage());
                 }
-            } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error('Failed to send update notification: ' . $e->getMessage());
-            }
+            })->afterResponse();
         }
 
         return redirect()->back()->with('success', '✅ Task updated successfully.');
@@ -452,17 +454,18 @@ class TaskController extends Controller
         $task->update($data);
 
         if ($request->status === 'completed') {
-            try {
-                $authUser = $request->user();
-                // Notify Admins about the completion in a beautiful template
-                \Illuminate\Support\Facades\Notification::route('mail', 'dev.clientg@gmail.com')
-                    ->notify(new \App\Notifications\TaskCompletedNotification($task, $authUser->name));
-                
-                // If there's an assigned user who isn't the one completing it, notify them too? 
-                // Usually admins just want to know. Added CC logic via BCC in Notification.
-            } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error('Failed to send task completion notification: ' . $e->getMessage());
-            }
+            $taskId = $task->id;
+            $completedByName = $request->user()->name;
+            dispatch(function () use ($taskId, $completedByName) {
+                try {
+                    $freshTask = Task::with('project', 'assignee')->find($taskId);
+                    if (!$freshTask) return;
+                    Notification::route('mail', 'dev.clientg@gmail.com')
+                        ->notify(new \App\Notifications\TaskCompletedNotification($freshTask, $completedByName));
+                } catch (\Exception $e) {
+                    Log::error('Failed to send task completion notification: ' . $e->getMessage());
+                }
+            })->afterResponse();
         }
 
         return redirect()->back()->with('success', '✅ Task status updated. Performance metrics recalculated.');
@@ -483,12 +486,23 @@ class TaskController extends Controller
 
         $task->update(['assigned_to' => $request->assigned_to]);
 
-        // Notify New Assignee
-        $newAssignee = User::find($request->assigned_to);
-        if ($newAssignee) {
-            $newAssignee->notify(new \App\Notifications\TaskAssignedNotification($task));
-        }
+        // Notify New Assignee (non-blocking)
+        $taskId = $task->id;
+        $newAssigneeId = $request->assigned_to;
+        $newAssigneeName = User::find($newAssigneeId)?->name ?? 'new member';
+        dispatch(function () use ($taskId, $newAssigneeId) {
+            try {
+                $freshTask = Task::with('project', 'assignee', 'creator')->find($taskId);
+                if (!$freshTask) return;
+                $newAssignee = User::find($newAssigneeId);
+                if ($newAssignee) {
+                    $newAssignee->notify(new \App\Notifications\TaskAssignedNotification($freshTask));
+                }
+            } catch (\Exception $e) {
+                Log::error('Failed to send reassign notification: ' . $e->getMessage());
+            }
+        })->afterResponse();
 
-        return redirect()->back()->with('success', '✅ Task successfully reassigned to ' . ($newAssignee->name ?? 'new member') . '.');
+        return redirect()->back()->with('success', '✅ Task successfully reassigned to ' . $newAssigneeName . '.');
     }
 }
