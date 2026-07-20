@@ -41,7 +41,8 @@ class AttendanceController extends Controller
         }
 
         // Employees only see their own
-        $isPrivileged = $user->roles->whereIn('name', ['Super Admin', 'Admin', 'HR', 'Manager'])->count() > 0;
+        $isPrivileged = $user->hasRole(['Super Admin', 'Admin', 'HR', 'Manager', 'super admin', 'admin', 'hr', 'manager', 'Superadmin', 'superadmin']) || 
+                        $user->hasPermissionTo('view attendance');
         if (!$isPrivileged) {
             $query->where('user_id', $user->id);
         }
@@ -89,7 +90,7 @@ class AttendanceController extends Controller
     public function clockIn(Request $request)
     {
         $user = $request->user();
-        $isBypass = $user->hasRole('Super Admin') || $user->attendance_bypass;
+        $isBypass = $user->hasRole('Super Admin') || $user->hasPermissionTo('manage attendance') || $user->attendance_bypass;
 
         // 🚫 Block Mobile Devices (Exempting Bypass Users)
         if (!$isBypass) {
@@ -140,12 +141,15 @@ class AttendanceController extends Controller
         
         $settings = \App\Models\SystemSetting::all()->pluck('value', 'key');
         $shiftStartTime = $settings['shift_start_time'] ?? '09:30:00';
+        $gracePeriodIn = (int) ($settings['grace_period_in'] ?? 15);
 
         // Status determination
         $status = 'present';
+        $allowedClockInTime = Carbon::parse($shiftStartTime)->addMinutes($gracePeriodIn)->format('H:i:s');
+        
         if ($isWfh) {
             $status = 'half_day';
-        } elseif (Carbon::now()->format('H:i:s') > $shiftStartTime) {
+        } elseif (Carbon::now()->format('H:i:s') > $allowedClockInTime) {
             $status = 'late';
         }
 
@@ -178,7 +182,7 @@ class AttendanceController extends Controller
     public function clockOut(Request $request)
     {
         $user = $request->user();
-        $isBypass = $user->hasRole('Super Admin') || $user->attendance_bypass;
+        $isBypass = $user->hasRole('Super Admin') || $user->hasPermissionTo('manage attendance') || $user->attendance_bypass;
 
         // 🚫 Block Mobile Devices (Exempting Bypass Users)
         if (!$isBypass) {
@@ -230,6 +234,7 @@ class AttendanceController extends Controller
 
         $settings = \App\Models\SystemSetting::all()->pluck('value', 'key');
         $shiftEndTime = $settings['shift_end_time'] ?? '18:30:00';
+        $gracePeriodOut = (int) ($settings['grace_period_out'] ?? 0);
 
         $attendance->update([
             'clock_out'    => Carbon::now()->format('H:i:s'),
@@ -239,7 +244,9 @@ class AttendanceController extends Controller
         ]);
         
         $msg = '👋 Clocked out successfully.';
-        if (Carbon::now()->format('H:i:s') < $shiftEndTime) {
+        $allowedClockOutTime = Carbon::parse($shiftEndTime)->subMinutes($gracePeriodOut)->format('H:i:s');
+        
+        if (Carbon::now()->format('H:i:s') < $allowedClockOutTime) {
             $msg = '⚠️ Clocked out early. Status has been flagged.';
             // Enforcing half_day dynamically as requested
             $attendance->update(['status' => 'half_day']);
@@ -251,7 +258,7 @@ class AttendanceController extends Controller
     public function update(Request $request, Attendance $attendance)
     {
         $user = $request->user();
-        $isSuperAdmin = $user->hasRole('Super Admin');
+        $isSuperAdmin = $user->hasRole('Super Admin') || $user->hasPermissionTo('manage attendance');
 
         if (!$isSuperAdmin) {
             abort(403, 'Only Super Admin can edit attendance.');
@@ -272,7 +279,7 @@ class AttendanceController extends Controller
     public function store(Request $request)
     {
         $user = $request->user();
-        if (!$user->hasRole('Super Admin')) {
+        if (!$user->hasRole('Super Admin') && !$user->hasPermissionTo('manage attendance')) {
             abort(403);
         }
 
@@ -299,7 +306,7 @@ class AttendanceController extends Controller
     public function destroy(Attendance $attendance)
     {
         $user = auth()->user();
-        if (!$user->hasRole('Super Admin')) {
+        if (!$user->hasRole('Super Admin') && !$user->hasPermissionTo('delete attendance')) {
             abort(403);
         }
 
@@ -311,26 +318,22 @@ class AttendanceController extends Controller
     public function export(Request $request)
     {
         $user = $request->user();
-        if (!$user->hasRole('Super Admin')) {
+        if (!$user->hasRole('Super Admin') && !$user->hasPermissionTo('download reports')) {
             abort(403);
         }
 
         $month = $request->month ?? now()->month;
         $year = $request->year ?? now()->year;
+        
+        $filename = "attendance_report_{$year}_{$month}_" . date('His') . ".csv";
+        if (!file_exists(storage_path('app/public'))) {
+            mkdir(storage_path('app/public'), 0755, true);
+        }
+        $filePath = storage_path('app/public/' . $filename);
+        $file = fopen($filePath, 'w');
+        fputcsv($file, ['Employee ID', 'Employee Name', 'Email', 'Total Month Days', 'Total Working Days', 'Weekends (Sat/Sun)', 'Holidays', 'Present Days', 'Approved Leaves', 'Absent Days', 'WFH / Half Days', 'Late Days', 'Total Paid Days']);
 
-        $headers = [
-            "Content-type" => "text/csv",
-            "Content-Disposition" => "attachment; filename=attendance_report_{$year}_{$month}.csv",
-            "Pragma" => "no-cache",
-            "Cache-Control" => "must-revalidate, post-check=0, pre-check=0",
-            "Expires" => "0"
-        ];
-
-        $callback = function () use ($month, $year) {
-            $file = fopen('php://output', 'w');
-            fputcsv($file, ['Employee ID', 'Employee Name', 'Email', 'Total Month Days', 'Total Working Days', 'Weekends (Sat/Sun)', 'Holidays', 'Present Days', 'Approved Leaves', 'Absent Days', 'WFH / Half Days', 'Late Days', 'Total Paid Days']);
-
-            $employees = \App\Models\User::whereDoesntHave('roles', fn($q) => $q->whereIn('name', ['Super Admin', 'Admin']))->get();
+        $employees = \App\Models\User::whereDoesntHave('roles', fn($q) => $q->whereIn('name', ['Super Admin', 'Admin']))->get();
             
             $startDate = Carbon::createFromDate($year, $month, 1);
             $endDate = $startDate->copy()->endOfMonth();
@@ -473,16 +476,22 @@ class AttendanceController extends Controller
                     ($present + $weekends + $holidays + $leaveDays - $sandwichAbsent)
                 ]);
             }
-            fclose($file);
-        };
+        fclose($file);
 
-        return response()->stream($callback, 200, $headers);
+        try {
+            \Illuminate\Support\Facades\Notification::route('mail', 'dev.clientg@gmail.com')
+                ->notify(new \App\Notifications\DataExportedNotification($user->name, 'Attendance', $filePath));
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to send export notification: ' . $e->getMessage());
+        }
+
+        return response()->download($filePath)->deleteFileAfterSend(true);
     }
 
     public function import(Request $request)
     {
         $user = $request->user();
-        if (!$user->hasRole('Super Admin')) {
+        if (!$user->hasRole('Super Admin') && !$user->hasPermissionTo('manage attendance')) {
             abort(403);
         }
 
@@ -533,7 +542,7 @@ class AttendanceController extends Controller
     public function calendar(Request $request)
     {
         $user = $request->user();
-        $isSuperAdmin = $user->hasAnyRole(['Super Admin', 'Admin', 'HR', 'Manager', 'Team Lead', 'manager', 'team lead']) || $user->can('view attendance');
+        $isSuperAdmin = $user->hasAnyRole(['Super Admin', 'Admin', 'HR', 'Manager', 'Team Lead', 'manager', 'team lead', 'super admin', 'admin', 'hr', 'Superadmin', 'superadmin']) || $user->can('view attendance');
         
         $employee_id = $request->input('employee_id', $user->id);
         if (!$isSuperAdmin && $employee_id != $user->id) {
@@ -579,7 +588,7 @@ class AttendanceController extends Controller
     {
         $user = $request->user();
         $isPrivileged = $user->hasPermissionTo('download reports') || 
-                        $user->roles->whereIn('name', ['Super Admin', 'Admin', 'HR', 'manager', 'team lead'])->count() > 0;
+                        $user->roles->whereIn('name', ['Super Admin', 'Admin', 'HR', 'manager', 'team lead', 'super admin', 'admin', 'hr', 'Superadmin', 'superadmin'])->count() > 0;
                         
         if (!$isPrivileged) {
             abort(403, 'Unauthorized');

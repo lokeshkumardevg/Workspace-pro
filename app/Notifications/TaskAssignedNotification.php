@@ -35,7 +35,7 @@ class TaskAssignedNotification extends Notification
             ->greeting('Hello ' . $greetingName . ',')
             ->line('A task has been assigned or updated in our system.')
             ->line('**Here are the brief details:**')
-            ->panel('**' . $this->task->title . '**' . "\n\n" . 
+            ->line('**' . $this->task->title . '**' . "\n\n" . 
                    '* **Project:** ' . ($this->task->project?->name ?? 'N/A') . "\n" .
                    '* **Assigned To:** ' . $assigneeName . "\n" .
                    '* **Assigned By:** ' . $assignedBy . "\n" .

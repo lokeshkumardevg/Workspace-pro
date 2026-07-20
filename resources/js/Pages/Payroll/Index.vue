@@ -12,7 +12,42 @@ const props = defineProps({
     canManage: Boolean,
     settings: Object,
     stats: Object,
+    filters: Object,
 });
+
+// ─── Filters ──────────────────────────────────────────────
+const search = ref(props.filters?.search || '');
+const filterMonth = ref(props.filters?.month || '');
+const filterYear = ref(props.filters?.year || '');
+
+const applyFilters = () => {
+    router.get(route('payroll.index'), {
+        search: search.value,
+        month: filterMonth.value,
+        year: filterYear.value,
+    }, { preserveState: true, replace: true });
+};
+
+// ─── Tabs & Setup ──────────────────────────────────────────
+const activeTab = ref('records');
+
+const setupForm = useForm({
+    salaries: (props.employees || []).map(e => ({
+        id: e.id,
+        name: e.name,
+        email: e.email,
+        base_salary: e.base_salary || 0,
+    }))
+});
+
+const submitSetup = () => {
+    setupForm.post(route('payroll.setup'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            // Option to notify user
+        }
+    });
+};
 
 // ─── Modals ─────────────────────────────────────────────
 const showAutoModal   = ref(false);
@@ -21,24 +56,51 @@ const showEditModal   = ref(false);
 const showSlipModal   = ref(false);
 const selectedPayroll = ref(null);
 
-// ─── Auto-generate Form ──────────────────────────────────
+// ─── Auto-generate Wizard ──────────────────────────────────
+import axios from 'axios';
+
+const wizardStep = ref(1);
+const wizardData = ref([]);
+const wizardLoading = ref(false);
+
 const autoForm = useForm({
-    user_id: '',
+    user_id: 'all',
     month: new Date().getMonth() + 1,
     year: new Date().getFullYear(),
-    bonuses: 0,
-    extra_deductions: 0,
+    payrolls: []
 });
 
+const previewPayroll = async () => {
+    wizardLoading.value = true;
+    try {
+        const response = await window.axios.post(route('payroll.preview'), {
+            user_id: autoForm.user_id,
+            month: autoForm.month,
+            year: autoForm.year,
+        });
+        wizardData.value = response.data.preview;
+        wizardStep.value = 2;
+    } catch (e) {
+        console.error(e);
+        alert('Failed to calculate preview. Please try again.');
+    }
+    wizardLoading.value = false;
+};
+
 const submitAuto = () => {
+    autoForm.payrolls = wizardData.value;
     autoForm.post(route('payroll.auto-generate'), {
-        onSuccess: () => { showAutoModal.value = false; autoForm.reset(); }
+        onSuccess: () => { 
+            showAutoModal.value = false; 
+            wizardStep.value = 1;
+            autoForm.reset(); 
+        }
     });
 };
 
-// Selected employee for preview
+// Selected employee for preview (manual form uses this too)
 const selectedEmployee = computed(() =>
-    props.employees.find(e => e.id == autoForm.user_id)
+    autoForm.user_id === 'all' ? 'all' : props.employees.find(e => e.id == autoForm.user_id)
 );
 
 // ─── Manual Form ─────────────────────────────────────────
@@ -161,7 +223,7 @@ const companyLocation = computed(() => props.settings?.company_location || '');
                     <button @click="showAutoModal = true"
                         class="bg-[#2CA01C] hover:bg-[#238016] text-white px-5 py-2.5 rounded-xl font-bold shadow-md hover:shadow-xl transition-all flex items-center gap-2 text-[11px] uppercase whitespace-nowrap active:scale-95">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                        Auto Generate
+                        Bulk Generate
                     </button>
                     <button @click="showManualModal = true"
                         class="bg-indigo-600 hover:bg-gray-900 text-white px-5 py-2.5 rounded-xl font-bold shadow-md hover:shadow-xl transition-all flex items-center gap-2 text-[11px] uppercase whitespace-nowrap active:scale-95">
@@ -197,6 +259,79 @@ const companyLocation = computed(() => props.settings?.company_location || '');
                             <p class="text-2xl font-black text-gray-900 mt-1">{{ item.isCurrency ? formatCurrency(item.value ?? 0) : (item.value ?? 0) }}</p>
                         </div>
                     </div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="flex gap-6 border-b-2 border-gray-100 mb-6" v-if="canManage">
+                    <button @click="activeTab = 'records'" :class="['py-3 border-b-2 font-black text-xs uppercase tracking-widest transition-all', activeTab === 'records' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-400 hover:text-gray-700']">
+                        Payroll Records
+                    </button>
+                    <button @click="activeTab = 'setup'" :class="['py-3 border-b-2 font-black text-xs uppercase tracking-widest transition-all', activeTab === 'setup' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-400 hover:text-gray-700']">
+                        Salary Setup
+                    </button>
+                </div>
+
+                <!-- ──────────────── SALARY SETUP TAB ──────────────── -->
+                <div v-show="activeTab === 'setup' && canManage" class="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <h3 class="text-lg font-black text-gray-900">Base Salary Setup</h3>
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Manage base salaries for all active employees.</p>
+                        </div>
+                        <button @click="submitSetup" :disabled="setupForm.processing" class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 disabled:opacity-50">
+                            {{ setupForm.processing ? 'Saving...' : 'Save All Salaries' }}
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b-2 border-gray-100">
+                                    <th class="py-4 px-4 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Employee</th>
+                                    <th class="py-4 px-4 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] w-64">Monthly Base Salary (₹)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(emp, index) in setupForm.salaries" :key="emp.id" class="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                                    <td class="py-4 px-4">
+                                        <p class="text-sm font-black text-gray-900">{{ emp.name }}</p>
+                                        <p class="text-[9px] text-gray-400 font-bold uppercase tracking-widest">{{ emp.email }}</p>
+                                    </td>
+                                    <td class="py-4 px-4">
+                                        <div class="relative">
+                                            <span class="absolute left-4 top-3 text-gray-400 font-black">₹</span>
+                                            <input v-model="emp.base_salary" type="number" class="w-full bg-white border border-gray-200 rounded-xl pl-8 pr-4 py-3 text-sm font-black focus:ring-indigo-500 focus:border-indigo-500" placeholder="0" />
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ──────────────── PAYROLL RECORDS TAB ──────────────── -->
+                <div v-show="activeTab === 'records' || !canManage">
+                    <!-- Filters -->
+                <div class="flex flex-col md:flex-row gap-4 mb-4 items-center">
+                    <input v-if="canManage" v-model="search" @keyup.enter="applyFilters" type="text" placeholder="Search by name..." class="bg-white border border-gray-100 rounded-2xl text-sm font-black shadow-sm focus:ring-indigo-500 focus:border-indigo-500 py-3.5 px-4 w-full md:w-64" />
+                    
+                    <select v-model="filterMonth" @change="applyFilters" class="bg-white border border-gray-100 rounded-2xl text-sm font-black shadow-sm focus:ring-indigo-500 focus:border-indigo-500 py-3.5 px-4 w-full md:w-48">
+                        <option value="">All Months</option>
+                        <option v-for="m in months" :key="m.value" :value="m.value">{{ m.label }}</option>
+                    </select>
+
+                    <select v-model="filterYear" @change="applyFilters" class="bg-white border border-gray-100 rounded-2xl text-sm font-black shadow-sm focus:ring-indigo-500 focus:border-indigo-500 py-3.5 px-4 w-full md:w-48">
+                        <option value="">All Years</option>
+                        <option v-for="y in [2023, 2024, 2025, 2026, 2027, 2028]" :key="y" :value="y">{{ y }}</option>
+                    </select>
+
+                    <button v-if="search || filterMonth || filterYear" @click="() => { search = ''; filterMonth = ''; filterYear = ''; applyFilters(); }" class="text-[10px] font-black text-rose-500 hover:text-rose-700 uppercase tracking-widest px-4 py-3.5">
+                        Clear
+                    </button>
+                    
+                    <button @click="applyFilters" class="ml-auto bg-gray-900 text-white rounded-2xl px-6 py-3.5 text-[10px] font-black uppercase tracking-widest hover:bg-gray-800 transition-all">
+                        Filter
+                    </button>
                 </div>
 
                 <!-- DataTable -->
@@ -287,46 +422,95 @@ const companyLocation = computed(() => props.settings?.company_location || '');
                 </div>
             </div>
         </div>
+        </div>
 
-        <!-- ───────── AUTO GENERATE MODAL ───────── -->
-        <Modal :show="showAutoModal" @close="showAutoModal = false" title="Auto Generate Payroll" maxWidth="xl">
-            <form @submit.prevent="submitAuto" class="space-y-6">
-                <div class="bg-indigo-50 rounded-2xl p-4 border border-indigo-100">
-                    <p class="text-[10px] font-black text-indigo-600 uppercase tracking-widest">🤖 Smart Calculation</p>
-                    <p class="text-xs text-indigo-500 mt-1">Automatically calculates based on attendance, LOP, PF (12%), and Professional Tax.</p>
-                </div>
-
-                <div>
-                    <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Select Employee</label>
-                    <select v-model="autoForm.user_id" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner py-3.5" required>
-                        <option value="">Choose Employee</option>
-                        <option v-for="emp in employees" :key="emp.id" :value="emp.id">
-                            {{ emp.name }} {{ emp.base_salary ? '— ₹' + Number(emp.base_salary).toLocaleString('en-IN') + '/mo' : '(No salary set)' }}
-                        </option>
-                    </select>
-                    <p v-if="selectedEmployee && !selectedEmployee.base_salary" class="text-amber-600 text-[10px] font-black mt-2 ml-1">⚠️ This employee has no base salary set. Update it in User Management first.</p>
-                    <p v-if="autoForm.errors.user_id" class="text-rose-500 text-[10px] font-black mt-2 ml-1">{{ autoForm.errors.user_id }}</p>
-                </div>
-
-                <!-- Month/Year automatically determined -->
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Bonus (₹)</label>
-                        <input v-model="autoForm.bonuses" type="number" step="0.01" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner py-3.5" min="0" placeholder="0" />
+        <!-- ───────── BULK GENERATE MODAL ───────── -->
+        <Modal :show="showAutoModal" @close="showAutoModal = false; wizardStep = 1;" title="Run Payroll Wizard" maxWidth="4xl">
+            <form @submit.prevent="submitAuto" class="p-2">
+                <!-- STEP 1: SELECT MONTH -->
+                <div v-show="wizardStep === 1" class="space-y-6 max-w-xl mx-auto py-4">
+                    <div class="text-center mb-8">
+                        <div class="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                        </div>
+                        <h3 class="text-xl font-black text-gray-900">Select Pay Period</h3>
+                        <p class="text-xs font-bold text-gray-400 mt-2">Choose the month to run payroll for all employees.</p>
                     </div>
-                    <div>
-                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Extra Deductions (₹)</label>
-                        <input v-model="autoForm.extra_deductions" type="number" step="0.01" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner py-3.5" min="0" placeholder="0" />
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Month</label>
+                            <select v-model="autoForm.month" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner py-3.5">
+                                <option v-for="m in months" :key="m.value" :value="m.value">{{ m.label }}</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Year</label>
+                            <select v-model="autoForm.year" class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner py-3.5">
+                                <option v-for="y in [2023, 2024, 2025, 2026, 2027]" :key="y" :value="y">{{ y }}</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="pt-6">
+                        <button type="button" @click="previewPayroll" :disabled="wizardLoading" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl transition-all active:scale-95 flex justify-center items-center gap-2 disabled:opacity-50">
+                            <span v-if="wizardLoading" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
+                            {{ wizardLoading ? 'Calculating...' : 'Next: Review & Edit ->' }}
+                        </button>
                     </div>
                 </div>
 
-                <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-50">
-                    <button type="button" @click="showAutoModal = false" class="px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-all">Cancel</button>
-                    <button type="submit" :disabled="autoForm.processing"
-                        class="px-12 py-3.5 bg-[#2CA01C] hover:bg-[#238016] text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-green-100 active:scale-95 disabled:opacity-50">
-                        {{ autoForm.processing ? 'Calculating...' : '🤖 Auto Generate' }}
-                    </button>
+                <!-- STEP 2: PREVIEW & FIXES -->
+                <div v-show="wizardStep === 2" class="space-y-4">
+                    <div class="bg-amber-50 text-amber-700 p-4 rounded-2xl border border-amber-100 flex gap-3 text-sm font-bold">
+                        <span>⚠️</span>
+                        <p>Please review the generated payroll data below. Employees marked in red have a Base Salary of 0. You can type in their salary directly in the table below to fix it, and the net pay will adjust.</p>
+                    </div>
+                    
+                    <div class="overflow-x-auto max-h-[60vh] rounded-2xl border border-gray-100 shadow-inner">
+                        <table class="w-full text-left bg-white text-sm">
+                            <thead class="bg-gray-50 sticky top-0 z-10 shadow-sm">
+                                <tr>
+                                    <th class="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Employee</th>
+                                    <th class="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Base (₹)</th>
+                                    <th class="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Payable Days</th>
+                                    <th class="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Bonus (₹)</th>
+                                    <th class="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Deductions (₹)</th>
+                                    <th class="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Net Salary (₹)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-50">
+                                <tr v-for="emp in wizardData" :key="emp.user_id" :class="{'bg-rose-50/50': !emp.base_salary}">
+                                    <td class="p-4 font-black text-gray-900 whitespace-nowrap">{{ emp.user?.name }}</td>
+                                    <td class="p-2 w-32">
+                                        <input v-model="emp.base_salary" type="number" class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold focus:ring-indigo-500" :class="{'border-rose-400 ring-1 ring-rose-400': !emp.base_salary}" />
+                                    </td>
+                                    <td class="p-4 text-center font-bold text-gray-600">
+                                        {{ emp.present_days }} <span class="text-[10px] text-gray-400">/ 30</span>
+                                        <div v-if="emp.lop_days > 0" class="text-[9px] text-rose-500 mt-0.5 uppercase">{{ emp.lop_days }} LOP</div>
+                                    </td>
+                                    <td class="p-2 w-28">
+                                        <input v-model="emp.bonuses" type="number" class="w-full bg-gray-50 border-transparent rounded-lg px-3 py-2 text-sm focus:bg-white focus:ring-indigo-500" />
+                                    </td>
+                                    <td class="p-2 w-28">
+                                        <input v-model="emp.deductions" type="number" class="w-full bg-gray-50 border-transparent rounded-lg px-3 py-2 text-sm focus:bg-white focus:ring-rose-500" />
+                                    </td>
+                                    <td class="p-4 font-black text-emerald-600">
+                                        {{ formatCurrency(Math.max(0, (emp.base_salary/30)*emp.present_days + Number(emp.bonuses) - Number(emp.deductions))) }}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-4 mt-2">
+                        <button type="button" @click="wizardStep = 1" class="px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-500 hover:bg-gray-50 transition-all"><- Back</button>
+                        <button type="submit" :disabled="autoForm.processing"
+                            class="px-10 py-3.5 bg-[#2CA01C] hover:bg-[#238016] text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-green-100 active:scale-95 disabled:opacity-50 flex gap-2 items-center">
+                            <span v-if="autoForm.processing" class="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></span>
+                            {{ autoForm.processing ? 'Generating...' : 'Confirm & Generate All' }}
+                        </button>
+                    </div>
                 </div>
             </form>
         </Modal>

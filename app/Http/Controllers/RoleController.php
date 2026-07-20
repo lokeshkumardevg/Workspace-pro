@@ -61,4 +61,15 @@ class RoleController extends Controller
         $role->delete();
         return back()->with('success', '🗑️ Role deleted successfully');
     }
+
+    public function storePermission(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|unique:permissions,name|max:255'
+        ]);
+
+        Permission::create(['name' => $request->name]);
+
+        return back()->with('success', '✅ Permission created successfully');
+    }
 }

@@ -228,6 +228,12 @@ const submitReassign = () => {
     });
 };
 
+const deleteTask = (taskId) => {
+    if (confirm('Are you sure you want to delete this task?')) {
+        router.delete(route('tasks.destroy', taskId));
+    }
+};
+
 const formatDate = (d) => {
     if (!d) return '—';
     const date = new Date(d);
@@ -410,11 +416,16 @@ const formatDateTime = (d) => {
                                                 {{ task.title }}
                                                 <span class="text-[9px] bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded-lg border border-gray-200">ID:{{ task.id }}</span>
                                             </button>
-                                            <!-- Edit Action (Only for creator) -->
-                                            <button v-if="task.created_by === $page.props.auth.user.id" 
+                                            <!-- Edit Action (For creator or admin) -->
+                                            <button v-if="isPrivileged || task.created_by === $page.props.auth.user.id" 
                                                     @click="openEditModal(task)" 
-                                                    class="p-1 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-indigo-600 transition-all">
+                                                    class="p-1 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-indigo-600 transition-all" title="Edit Task">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                            </button>
+                                            <button v-if="isPrivileged || task.created_by === $page.props.auth.user.id"
+                                                    @click="deleteTask(task.id)"
+                                                    class="p-1 hover:bg-rose-50 rounded-lg text-gray-400 hover:text-rose-600 transition-all ml-1" title="Delete Task">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                             </button>
                                         </div>
                                         <div class="flex items-center gap-2 mt-1.5">
@@ -434,6 +445,10 @@ const formatDateTime = (d) => {
                                             <div v-if="task.due_date" class="text-[9px] text-rose-500 font-black flex items-center gap-1 uppercase tracking-widest pl-2 border-l border-gray-200">
                                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                                 Deadline: {{ formatDateTime(task.due_date) }}
+                                            </div>
+                                            <div class="text-[9px] text-gray-500 font-black flex items-center gap-1 uppercase tracking-widest pl-2 border-l border-gray-200">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                                Created: {{ formatDate(task.created_at) }}
                                             </div>
                                         </div>
                                     </div>
@@ -525,7 +540,7 @@ const formatDateTime = (d) => {
                                                    @change="updateStatus(task.id, task.status === 'completed' ? 'pending' : 'completed')" 
                                                    class="w-4 h-4 rounded-md border-gray-100 text-emerald-500 focus:ring-emerald-500 cursor-pointer shadow-inner" />
                                             <div class="flex flex-col gap-1">
-                                                <span class="text-[9px] font-black text-gray-400 uppercase tracking-tighter">ID: {{ task.id }}</span>
+                                                <span class="text-[9px] font-black text-gray-400 uppercase tracking-tighter flex items-center gap-1">ID: {{ task.id }} <span class="mx-0.5">•</span> {{ formatDate(task.created_at) }}</span>
                                                 <span class="text-[8px] font-black text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100 uppercase tracking-tight">{{ task.project?.name || 'Independent' }}</span>
                                             </div>
                                         </div>
@@ -550,6 +565,11 @@ const formatDateTime = (d) => {
                                             </div>
                                         </div>
                                         <div class="flex items-center gap-2">
+                                            <button v-if="isPrivileged || task.created_by === $page.props.auth.user.id" 
+                                                    @click.stop="deleteTask(task.id)" 
+                                                    class="p-2 bg-rose-50 text-rose-500 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm" title="Delete Task">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                            </button>
                                             <button @click.stop="openCommunication(task)" class="p-2 bg-gray-50 text-gray-400 rounded-xl hover:bg-gray-900 hover:text-white transition-all shadow-sm">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
                                             </button>
@@ -581,7 +601,7 @@ const formatDateTime = (d) => {
                                 <div class="bg-white p-5 rounded-[1.8rem] shadow-sm border-2 border-transparent hover:border-indigo-400 hover:shadow-xl hover:-translate-y-1 transition-all cursor-grab active:cursor-grabbing group">
                                     <div class="flex justify-between items-start mb-4">
                                         <div class="flex flex-col gap-1">
-                                            <span class="text-[9px] font-black text-gray-400 uppercase tracking-tighter">ID: {{ task.id }}</span>
+                                            <span class="text-[9px] font-black text-gray-400 uppercase tracking-tighter flex items-center gap-1">ID: {{ task.id }} <span class="mx-0.5">•</span> {{ formatDate(task.created_at) }}</span>
                                             <span class="text-[8px] font-black text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100 uppercase tracking-tight">{{ task.project?.name || 'Independent' }}</span>
                                         </div>
                                         <div v-if="task.priority" class="h-2 w-2 rounded-full" :class="{ 'bg-emerald-400': task.priority === 'low', 'bg-amber-400': task.priority === 'medium', 'bg-orange-500': task.priority === 'high', 'bg-rose-500': task.priority === 'urgent' }"></div>
@@ -599,6 +619,11 @@ const formatDateTime = (d) => {
                                             <span class="text-[9px] font-black text-gray-500 uppercase tracking-tight">{{ task.assignee?.name || 'Self' }}</span>
                                         </div>
                                         <div class="flex items-center gap-2">
+                                            <button v-if="isPrivileged || task.created_by === $page.props.auth.user.id" 
+                                                    @click.stop="deleteTask(task.id)" 
+                                                    class="p-2 bg-rose-50 text-rose-500 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm" title="Delete Task">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                            </button>
                                             <button @click.stop="openCommunication(task)" class="p-2 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-gray-900 hover:text-white transition-all shadow-sm">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
                                             </button>
@@ -630,7 +655,7 @@ const formatDateTime = (d) => {
                                 <div class="bg-white p-5 rounded-[1.8rem] shadow-sm border-2 border-transparent hover:border-fuchsia-400 hover:shadow-xl hover:-translate-y-1 transition-all cursor-grab active:cursor-grabbing group">
                                     <div class="flex justify-between items-start mb-4">
                                         <div class="flex flex-col gap-1">
-                                            <span class="text-[9px] font-black text-gray-400 uppercase tracking-tighter">ID: {{ task.id }}</span>
+                                            <span class="text-[9px] font-black text-gray-400 uppercase tracking-tighter flex items-center gap-1">ID: {{ task.id }} <span class="mx-0.5">•</span> {{ formatDate(task.created_at) }}</span>
                                             <span class="text-[8px] font-black text-fuchsia-500 bg-fuchsia-50 px-2 py-0.5 rounded-lg border border-fuchsia-100 uppercase tracking-tight">{{ task.project?.name || 'Independent' }}</span>
                                         </div>
                                         <div v-if="task.priority" class="h-2 w-2 rounded-full" :class="{ 'bg-emerald-400': task.priority === 'low', 'bg-amber-400': task.priority === 'medium', 'bg-orange-500': task.priority === 'high', 'bg-rose-500': task.priority === 'urgent' }"></div>
@@ -648,6 +673,11 @@ const formatDateTime = (d) => {
                                             <span class="text-[9px] font-black text-gray-500 uppercase tracking-tight">{{ task.assignee?.name || 'Self' }}</span>
                                         </div>
                                         <div class="flex items-center gap-2">
+                                            <button v-if="isPrivileged || task.created_by === $page.props.auth.user.id" 
+                                                    @click.stop="deleteTask(task.id)" 
+                                                    class="p-2 bg-rose-50 text-rose-500 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm" title="Delete Task">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                            </button>
                                             <button @click.stop="openCommunication(task)" class="p-2 bg-fuchsia-50 text-fuchsia-600 rounded-xl hover:bg-gray-900 hover:text-white transition-all shadow-sm">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
                                             </button>
@@ -679,7 +709,7 @@ const formatDateTime = (d) => {
                                 <div class="bg-white/80 p-5 rounded-[1.8rem] shadow-sm border-2 border-transparent hover:border-emerald-400 hover:shadow-xl hover:-translate-y-1 transition-all cursor-grab active:cursor-grabbing group">
                                     <div class="flex justify-between items-start mb-4">
                                         <div class="flex flex-col gap-1">
-                                            <span class="text-[9px] font-black text-gray-400 uppercase tracking-tighter">ID: {{ task.id }}</span>
+                                            <span class="text-[9px] font-black text-gray-400 uppercase tracking-tighter flex items-center gap-1">ID: {{ task.id }} <span class="mx-0.5">•</span> {{ formatDate(task.created_at) }}</span>
                                         </div>
                                         <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7"></path></svg>
                                     </div>
@@ -689,7 +719,14 @@ const formatDateTime = (d) => {
                                         <div class="flex items-center gap-2 grayscale group-hover:grayscale-0 transition-all">
                                             <img class="h-8 w-8 rounded-xl border-2 border-white shadow-sm" :src="'https://ui-avatars.com/api/?name='+(task.assignee?.name || 'U')+'&background=10b981&color=fff'" alt="Avatar">
                                         </div>
-                                        <span class="text-[8px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100 shadow-sm opacity-60 group-hover:opacity-100">Verified Done</span>
+                                        <div class="flex items-center gap-2">
+                                            <button v-if="isPrivileged || task.created_by === $page.props.auth.user.id" 
+                                                    @click.stop="deleteTask(task.id)" 
+                                                    class="p-2 bg-rose-50 text-rose-500 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm" title="Delete Task">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                            </button>
+                                            <span class="text-[8px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100 shadow-sm opacity-60 group-hover:opacity-100">Verified Done</span>
+                                        </div>
                                     </div>
                                 </div>
                             </template>

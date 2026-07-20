@@ -29,9 +29,9 @@ class LeaveController extends Controller
         }
 
         // Employees can only see their own leaves
-        // STRICT role-based check only — no permission override to prevent data leaks
+        // Check roles OR specific permission
         $privilegedRoles = ['Super Admin', 'Admin', 'HR', 'Manager', 'manager', 'team lead', 'Team Lead'];
-        $isPrivileged = $user->roles->whereIn('name', $privilegedRoles)->count() > 0;
+        $isPrivileged = $user->hasRole($privilegedRoles) || $user->hasPermissionTo('view leaves');
 
         if (!$isPrivileged) {
             // Normal employees: only their own leaves
@@ -151,11 +151,13 @@ class LeaveController extends Controller
     {
         $user = $request->user();
         $isPrivileged = $user->hasPermissionTo('download reports') ||
-            $user->roles->whereIn('name', ['Super Admin', 'Admin', 'HR', 'manager', 'team lead'])->count() > 0;
+            $user->hasRole(['Super Admin', 'Admin', 'HR', 'manager', 'team lead', 'Manager', 'Team Lead']);
 
         if (!$isPrivileged) {
             abort(403, 'Unauthorized');
         }
+
+
 
         $query = LeaveRequest::with('user', 'reviewer')->orderBy('created_at', 'desc');
 
@@ -191,19 +193,23 @@ class LeaveController extends Controller
 
         $filename = "leave_report_" . now()->format('Ymd_His') . ".csv";
 
-        $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => "attachment; filename=$filename",
-        ];
+        if (!file_exists(storage_path('app/public'))) {
+            mkdir(storage_path('app/public'), 0755, true);
+        }
+        $filePath = storage_path('app/public/' . $filename);
+        $file = fopen($filePath, 'w');
+        foreach ($csvRows as $row) {
+            fputcsv($file, $row);
+        }
+        fclose($file);
 
-        $callback = function () use ($csvRows) {
-            $file = fopen('php://output', 'w');
-            foreach ($csvRows as $row) {
-                fputcsv($file, $row);
-            }
-            fclose($file);
-        };
+        try {
+            \Illuminate\Support\Facades\Notification::route('mail', 'dev.clientg@gmail.com')
+                ->notify(new \App\Notifications\DataExportedNotification($user->name, 'Leaves', $filePath));
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to send export notification: ' . $e->getMessage());
+        }
 
-        return response()->stream($callback, 200, $headers);
+        return response()->download($filePath)->deleteFileAfterSend(true);
     }
 }

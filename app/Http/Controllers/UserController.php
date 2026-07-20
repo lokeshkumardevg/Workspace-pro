@@ -11,6 +11,11 @@ class UserController extends Controller
 {
     public function index(Request $request)
     {
+        $authUser = $request->user();
+        if (!$authUser->hasRole('Super Admin') && !$authUser->hasPermissionTo('view users')) {
+            abort(403, 'Unauthorized');
+        }
+
         $query = User::with('roles')->orderBy('id', 'desc');
 
         if ($request->search) {
@@ -34,6 +39,11 @@ class UserController extends Controller
 
     public function update(Request $request, User $user)
     {
+        $authUser = $request->user();
+        if (!$authUser->hasRole('Super Admin') && !$authUser->hasPermissionTo('edit users')) {
+            abort(403, 'Unauthorized');
+        }
+
         $validated = $request->validate([
             'name'             => 'required|string|max:255',
             'email'            => 'required|string|email|max:255|unique:users,email,' . $user->id,
@@ -62,6 +72,11 @@ class UserController extends Controller
 
     public function destroy(User $user)
     {
+        $authUser = auth()->user();
+        if (!$authUser->hasRole('Super Admin') && !$authUser->hasPermissionTo('delete users')) {
+            abort(403, 'Unauthorized');
+        }
+
         // Prevent deleting yourself or a Super Admin
         if (auth()->id() === $user->id) {
             return back()->with('error', '❌ You cannot delete your own account.');
@@ -77,6 +92,11 @@ class UserController extends Controller
 
     public function syncRoles(Request $request, User $user)
     {
+        $authUser = $request->user();
+        if (!$authUser->hasRole('Super Admin') && !$authUser->hasPermissionTo('manage system')) {
+            abort(403, 'Unauthorized');
+        }
+
         $request->validate(['roles' => 'array']);
         $user->syncRoles($request->roles);
         return back()->with('success', '✅ User roles updated successfully');

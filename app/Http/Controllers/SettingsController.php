@@ -15,9 +15,9 @@ class SettingsController extends Controller
         // Default settings if empty
         if ($settings->isEmpty()) {
             $settings = [
-                'app_name' => 'Antigravity Workspace',
-                'company_name' => 'Antigravity Solutions',
-                'contact_email' => 'admin@antigravity.com',
+                'app_name' => 'Wheedle Teechnologies ',
+                'company_name' => 'wheedle technologies',
+                'contact_email' => 'hr@wheedletechnologies.ai',
                 'currency' => 'INR',
                 'timezone' => 'Asia/Kolkata',
                 'primary_color' => '#6366f1',
@@ -26,6 +26,8 @@ class SettingsController extends Controller
                 'office_radius' => '200',
                 'shift_start_time' => '09:30:00',
                 'shift_end_time' => '18:30:00',
+                'grace_period_in' => '15',
+                'grace_period_out' => '0',
             ];
         }
 

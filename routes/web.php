@@ -94,6 +94,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/tasks/{task}/status', [\App\Http\Controllers\TaskController::class, 'updateStatus'])->name('tasks.status');
     Route::put('/tasks/{task}/reassign', [\App\Http\Controllers\TaskController::class, 'reassign'])->name('tasks.reassign');
     Route::post('/tasks/{task}/comments', [\App\Http\Controllers\TaskCommentController::class, 'store'])->name('tasks.comments.store');
+    Route::delete('/tasks/{task}', [\App\Http\Controllers\TaskController::class, 'destroy'])->name('tasks.destroy');
 
     // Attendance
     Route::get('/attendance', [\App\Http\Controllers\AttendanceController::class, 'index'])->name('attendance.index');
@@ -125,6 +126,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/users/{user}/sync-roles', [\App\Http\Controllers\UserController::class, 'syncRoles'])->name('users.sync-roles');
 
     Route::resource('roles', \App\Http\Controllers\RoleController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::post('/permissions', [\App\Http\Controllers\RoleController::class, 'storePermission'])->name('permissions.store');
 
     // Notifications
     Route::post('/notifications/{id}/read', [\App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('notifications.read');
@@ -148,6 +150,8 @@ Route::middleware('auth')->group(function () {
 
     // Payroll
     Route::get('/payroll', [\App\Http\Controllers\PayrollController::class, 'index'])->name('payroll.index');
+    Route::post('/payroll/setup', [\App\Http\Controllers\PayrollController::class, 'saveSetup'])->name('payroll.setup');
+    Route::post('/payroll/preview', [\App\Http\Controllers\PayrollController::class, 'preview'])->name('payroll.preview');
     Route::post('/payroll', [\App\Http\Controllers\PayrollController::class, 'store'])->name('payroll.store');
     Route::put('/payroll/{payroll}', [\App\Http\Controllers\PayrollController::class, 'update'])->name('payroll.update');
     Route::post('/payroll/auto-generate', [\App\Http\Controllers\PayrollController::class, 'autoGenerate'])->name('payroll.auto-generate');

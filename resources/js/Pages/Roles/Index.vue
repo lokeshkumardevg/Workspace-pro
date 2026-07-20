@@ -63,6 +63,23 @@ const closeModal = () => {
     editingRole.value = null;
 };
 
+const showPermissionModal = ref(false);
+const permissionForm = useForm({ name: '' });
+
+const openPermissionModal = () => {
+    permissionForm.reset();
+    showPermissionModal.value = true;
+};
+
+const submitPermission = () => {
+    permissionForm.post(route('permissions.store'), {
+        onSuccess: () => {
+            showPermissionModal.value = false;
+            permissionForm.reset();
+        }
+    });
+};
+
 // Group permissions by prefix for better UI
 const groupedPermissions = props.allPermissions.reduce((acc, perm) => {
     const parts = perm.name.split(' ');
@@ -82,10 +99,16 @@ const groupedPermissions = props.allPermissions.reduce((acc, perm) => {
                 <h2 class="text-2xl font-black leading-tight text-gray-800 uppercase tracking-tighter">
                     Roles & Permissions
                 </h2>
-                <button @click="openModal()" class="bg-[#2CA01C] hover:bg-[#238016] text-white px-6 py-2.5 rounded-xl font-bold shadow-md hover:shadow-xl transition-all flex items-center gap-2 text-[11px] uppercase whitespace-nowrap active:scale-95">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" /></svg>
-                    Add Role
-                </button>
+                <div class="flex items-center gap-3">
+                    <button @click="openPermissionModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl font-bold shadow-md hover:shadow-xl transition-all flex items-center gap-2 text-[11px] uppercase whitespace-nowrap active:scale-95">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" /></svg>
+                        New Permission
+                    </button>
+                    <button @click="openModal()" class="bg-[#2CA01C] hover:bg-[#238016] text-white px-6 py-2.5 rounded-xl font-bold shadow-md hover:shadow-xl transition-all flex items-center gap-2 text-[11px] uppercase whitespace-nowrap active:scale-95">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" /></svg>
+                        Add Role
+                    </button>
+                </div>
             </div>
         </template>
 
@@ -197,6 +220,23 @@ const groupedPermissions = props.allPermissions.reduce((acc, perm) => {
                             class="px-12 py-3.5 bg-indigo-600 hover:bg-gray-950 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-100 active:scale-95 disabled:opacity-50">
                         {{ form.processing ? 'Saving...' : (editingRole ? 'Update Role' : 'Save Role') }}
                     </button>
+                </div>
+            </form>
+        </Modal>
+        <!-- Permission Form Modal -->
+        <Modal :show="showPermissionModal" @close="showPermissionModal = false" title="Create New Permission" maxWidth="xl">
+            <form @submit.prevent="submitPermission" class="p-8">
+                <div>
+                    <label class="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Permission Name</label>
+                    <input v-model="permissionForm.name" type="text" 
+                        class="w-full bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 text-sm font-black shadow-inner py-3.5 tracking-wide" 
+                        required placeholder="e.g. view inventory" />
+                    <p v-if="permissionForm.errors.name" class="mt-2 text-[10px] text-red-600 font-black uppercase tracking-widest ml-1">{{ permissionForm.errors.name }}</p>
+                    <p class="mt-3 text-[10px] text-gray-400 font-bold ml-1">Use a format like `action module` (e.g. `view payroll`, `manage inventory`)</p>
+                </div>
+                <div class="mt-8 flex justify-end gap-3">
+                    <button type="button" @click="showPermissionModal = false" class="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors">Cancel</button>
+                    <button type="submit" :disabled="permissionForm.processing" class="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-200 transition-all active:scale-95 disabled:opacity-50">Create</button>
                 </div>
             </form>
         </Modal>

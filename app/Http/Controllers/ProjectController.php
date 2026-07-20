@@ -64,7 +64,7 @@ class ProjectController extends Controller
 
     public function update(Request $request, Project $project)
     {
-        if (!$request->user()->hasRole('Super Admin')) {
+        if (!$request->user()->hasRole('Super Admin') && !$request->user()->hasPermissionTo('edit projects')) {
             abort(403);
         }
 

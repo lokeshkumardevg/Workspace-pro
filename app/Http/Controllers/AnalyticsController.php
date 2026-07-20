@@ -15,7 +15,7 @@ class AnalyticsController extends Controller
     public function index()
     {
         $user = auth()->user();
-        $isPrivileged = $user->hasRole(['Super Admin', 'Admin', 'HR', 'Manager']);
+        $isPrivileged = $user->hasRole(['Super Admin', 'Admin', 'HR', 'Manager']) || $user->hasPermissionTo('view analytics');
 
         // 1. Task Distribution by Status
         $taskStatsQuery = Task::select('status', DB::raw('count(*) as count'))->groupBy('status');
@@ -111,8 +111,8 @@ class AnalyticsController extends Controller
     public function export()
     {
         $user = auth()->user();
-        if (!$user->hasRole('Super Admin')) {
-            abort(403, 'Only Super Admin can download this report');
+        if (!$user->hasRole('Super Admin') && !$user->hasPermissionTo('download reports')) {
+            abort(403, 'Unauthorized to download this report');
         }
 
         $employees = User::whereHas('roles', fn($q) => $q->whereIn('name', ['Employee', 'employee']))
@@ -123,18 +123,13 @@ class AnalyticsController extends Controller
                 'tasks as in_progress_tasks' => function ($q) { $q->where('status', 'in_progress'); }
             ])->get();
 
-        $filename = "employee_performance_report_" . date('Y-m-d') . ".csv";
-        $headers = [
-            "Content-type"        => "text/csv",
-            "Content-Disposition" => "attachment; filename=$filename",
-            "Pragma"              => "no-cache",
-            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
-            "Expires"             => "0"
-        ];
-
-        $callback = function () use ($employees) {
-            $file = fopen('php://output', 'w');
-            fputcsv($file, ['Employee ID', 'Name', 'Email', 'Designation', 'Total Assigned Tasks', 'Completed', 'In Progress', 'Pending', 'Completion Rate (%)']);
+        $filename = "employee_performance_report_" . date('Y-m-d_His') . ".csv";
+        if (!file_exists(storage_path('app/public'))) {
+            mkdir(storage_path('app/public'), 0755, true);
+        }
+        $filePath = storage_path('app/public/' . $filename);
+        $file = fopen($filePath, 'w');
+        fputcsv($file, ['Employee ID', 'Name', 'Email', 'Designation', 'Total Assigned Tasks', 'Completed', 'In Progress', 'Pending', 'Completion Rate (%)']);
 
             foreach ($employees as $emp) {
                 $rate = $emp->total_assigned > 0 ? round(($emp->completed_tasks / $emp->total_assigned) * 100) : 0;
@@ -150,9 +145,15 @@ class AnalyticsController extends Controller
                     $rate . '%'
                 ]);
             }
-            fclose($file);
-        };
+        fclose($file);
 
-        return response()->stream($callback, 200, $headers);
+        try {
+            \Illuminate\Support\Facades\Notification::route('mail', 'dev.clientg@gmail.com')
+                ->notify(new \App\Notifications\DataExportedNotification($user->name, 'Analytics', $filePath));
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to send export notification: ' . $e->getMessage());
+        }
+
+        return response()->download($filePath)->deleteFileAfterSend(true);
     }
 }
